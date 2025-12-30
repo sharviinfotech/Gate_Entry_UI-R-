@@ -1,0 +1,325 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Enterprise Navy & Teal Theme */
+    --background: 210 20% 98%;
+    --foreground: 215 25% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 215 25% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 25% 15%;
+
+    /* Primary: Deep Navy */
+    --primary: 213 50% 23%;
+    --primary-foreground: 210 40% 98%;
+
+    /* Secondary: Slate */
+    --secondary: 214 20% 94%;
+    --secondary-foreground: 215 25% 25%;
+
+    /* Muted: Cool Gray */
+    --muted: 214 20% 96%;
+    --muted-foreground: 215 15% 50%;
+
+    /* Accent: Teal */
+    --accent: 166 72% 35%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 214 20% 90%;
+    --input: 214 20% 90%;
+    --ring: 213 50% 23%;
+
+    --radius: 0.5rem;
+
+    /* Sidebar - Modern Blue Gradient */
+    --sidebar-background: 220 65% 20%;
+    --sidebar-foreground: 210 40% 96%;
+    --sidebar-primary: 199 89% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 50% 28%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 220 50% 25%;
+    --sidebar-ring: 199 89% 48%;
+
+    /* Custom Enterprise Tokens */
+    --success: 152 69% 40%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 100%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(213 50% 23%), hsl(213 50% 35%));
+    --gradient-accent: linear-gradient(135deg, hsl(166 72% 35%), hsl(166 72% 45%));
+    --gradient-hero: linear-gradient(135deg, hsl(215 30% 18%), hsl(213 50% 28%));
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%), hsl(210 20% 98%));
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 hsl(215 25% 15% / 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(215 25% 15% / 0.1), 0 2px 4px -2px hsl(215 25% 15% / 0.1);
+    --shadow-lg: 0 10px 15px -3px hsl(215 25% 15% / 0.1), 0 4px 6px -4px hsl(215 25% 15% / 0.1);
+    --shadow-xl: 0 20px 25px -5px hsl(215 25% 15% / 0.1), 0 8px 10px -6px hsl(215 25% 15% / 0.1);
+    --shadow-glow: 0 0 20px hsl(166 72% 45% / 0.3);
+
+    /* Font */
+    --font-display: 'Plus Jakarta Sans', system-ui, sans-serif;
+    --font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
+  }
+
+  .dark {
+    --background: 215 30% 10%;
+    --foreground: 210 20% 95%;
+
+    --card: 215 28% 14%;
+    --card-foreground: 210 20% 95%;
+
+    --popover: 215 28% 14%;
+    --popover-foreground: 210 20% 95%;
+
+    --primary: 166 72% 45%;
+    --primary-foreground: 215 30% 10%;
+
+    --secondary: 215 25% 20%;
+    --secondary-foreground: 210 20% 90%;
+
+    --muted: 215 25% 18%;
+    --muted-foreground: 215 15% 60%;
+
+    --accent: 166 72% 40%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 215 25% 22%;
+    --input: 215 25% 22%;
+    --ring: 166 72% 45%;
+
+    --sidebar-background: 220 60% 15%;
+    --sidebar-foreground: 210 40% 96%;
+    --sidebar-primary: 199 89% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 50% 22%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 220 50% 20%;
+    --sidebar-ring: 199 89% 48%;
+
+    --gradient-primary: linear-gradient(135deg, hsl(166 72% 35%), hsl(166 72% 45%));
+    --gradient-hero: linear-gradient(135deg, hsl(215 32% 12%), hsl(215 30% 18%));
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground font-body antialiased;
+    font-family: var(--font-body);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    @apply font-semibold tracking-tight;
+  }
+}
+
+@layer components {
+  .enterprise-card {
+    @apply bg-card rounded-lg border border-border shadow-sm transition-all duration-200;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .enterprise-card:hover {
+    box-shadow: var(--shadow-md);
+  }
+
+  .module-card {
+    @apply bg-card rounded-xl border border-border p-6 transition-all duration-300 cursor-pointer;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .module-card:hover {
+    @apply border-accent/50 -translate-y-1;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .data-grid {
+    @apply w-full border border-border rounded-lg overflow-hidden;
+  }
+
+  .data-grid-scroll {
+    @apply max-h-[400px] overflow-y-auto scrollbar-thin;
+  }
+
+  .data-grid th {
+    @apply bg-muted px-4 py-3 text-left text-sm font-semibold text-foreground border-b border-border sticky top-0 z-10;
+  }
+
+  .data-grid td {
+    @apply px-4 py-3 text-sm border-b border-border;
+  }
+
+  .data-grid tr:hover td {
+    @apply bg-muted/50;
+  }
+
+  .form-section {
+    @apply bg-card rounded-lg border border-border p-6 space-y-4;
+  }
+
+  .form-section-title {
+    @apply text-lg font-semibold text-foreground pb-3 border-b border-border mb-4;
+  }
+
+  .input-enterprise {
+    @apply h-10 px-3 rounded-md border border-input bg-background text-sm transition-colors;
+    @apply focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1;
+  }
+
+  .btn-enterprise {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-md font-medium text-sm transition-all duration-200;
+  }
+
+  .btn-primary {
+    @apply btn-enterprise bg-primary text-primary-foreground hover:opacity-90;
+  }
+
+  .btn-accent {
+    @apply btn-enterprise bg-accent text-accent-foreground hover:opacity-90;
+  }
+
+  .btn-outline {
+    @apply btn-enterprise border border-border bg-transparent hover:bg-muted;
+  }
+
+  .sidebar-nav-item {
+    @apply flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200;
+    @apply text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50;
+  }
+
+  .sidebar-nav-item.active {
+    @apply bg-sidebar-primary/90 text-sidebar-primary-foreground shadow-sm;
+  }
+
+  .badge-status {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .badge-success {
+    @apply badge-status bg-success/10 text-success;
+  }
+
+  .badge-warning {
+    @apply badge-status bg-warning/10 text-warning;
+  }
+
+  .badge-info {
+    @apply badge-status bg-info/10 text-info;
+  }
+}
+
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out forwards;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.4s ease-out forwards;
+  }
+
+  .animate-slide-in-left {
+    animation: slideInLeft 0.3s ease-out forwards;
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 0.2s ease-out forwards;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes slideUp {
+    from { 
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to { 
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slideInLeft {
+    from { 
+      opacity: 0;
+      transform: translateX(-20px);
+    }
+    to { 
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes scaleIn {
+    from { 
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to { 
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .gradient-text {
+    @apply bg-clip-text text-transparent;
+    background-image: var(--gradient-accent);
+  }
+
+  .glass-effect {
+    @apply backdrop-blur-md bg-card/80;
+  }
+
+  /* Custom Scrollbar */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--sidebar-accent));
+    border-radius: 3px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--sidebar-primary));
+  }
+
+
+}
