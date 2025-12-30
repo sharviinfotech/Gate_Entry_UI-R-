@@ -117,6 +117,14 @@ const backendNodejs = {
         });
         return res.json();
     },
+       Login_Submit_Authentication: async (data) => {
+        const res = await fetch(`${BASE_URL}api/external/Gate_Entry/Login_Submit_Authentication`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+        });
+        return res.json();
+    },
 
 };
 
