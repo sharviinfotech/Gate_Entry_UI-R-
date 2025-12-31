@@ -5,33 +5,28 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Eye, EyeOff, LogIn, UserPlus, Loader2, ChevronLeft, ChevronRight, ArrowLeftRight } from 'lucide-react';
+import { Eye, EyeOff, LogIn, Loader2, ChevronLeft, ChevronRight, ArrowLeftRight } from 'lucide-react';
 import reslLogo from '@/assets/resl-logo.png';
 import gateEntry4 from '@/assets/gate-entry-4.jpg';
 import gateEntry5 from '@/assets/gate-entry-5.jpg';
 import { z } from 'zod';
 
+// Updated schema to use 'username' (min 3 chars) instead of email
 const authSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  username: z.string().min(3, 'Username must be at least 3 characters'),
+  password: z.string().min(4, 'Password must be at least 4 characters'),
 });
 
 const backgroundImages = [gateEntry4, gateEntry5];
 
-const quotes = [
-  { text: "Sustainability is not a destination, it's a journey of continuous improvement.", author: "RE Sustainability" },
-  { text: "Every gate entry marks a step towards a greener tomorrow.", author: "RE Sustainability" },
-];
-
 export default function Auth() {
   const navigate = useNavigate();
-  const { user, loading, signIn, signUp } = useAuth();
-  const [isLogin, setIsLogin] = useState(true);
-  const [email, setEmail] = useState('');
+  const { user, loading, signIn } = useAuth();
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [errors, setErrors] = useState<{ username?: string; password?: string }>({});
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFormOnLeft, setIsFormOnLeft] = useState(true);
 
@@ -51,14 +46,14 @@ export default function Auth() {
 
   const validateForm = () => {
     try {
-      authSchema.parse({ email, password });
+      authSchema.parse({ username, password });
       setErrors({});
       return true;
     } catch (error) {
       if (error instanceof z.ZodError) {
-        const fieldErrors: { email?: string; password?: string } = {};
+        const fieldErrors: { username?: string; password?: string } = {};
         error.errors.forEach((err) => {
-          if (err.path[0] === 'email') fieldErrors.email = err.message;
+          if (err.path[0] === 'username') fieldErrors.username = err.message;
           if (err.path[0] === 'password') fieldErrors.password = err.message;
         });
         setErrors(fieldErrors);
@@ -69,39 +64,25 @@ export default function Auth() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+     localStorage.removeItem('gate_entry_user');
     if (!validateForm()) return;
 
     setIsSubmitting(true);
 
     try {
-      if (isLogin) {
-        const { error } = await signIn(email, password);
-        if (error) {
-          if (error.message.includes('Invalid login credentials')) {
-            toast.error('Invalid email or password. Please try again.');
-          } else {
-            toast.error(error.message);
-          }
-        } else {
-          toast.success('Welcome back!');
-          navigate('/dashboard');
-        }
+      // Calling your Node.js API through the AuthContext
+      const { error } = await signIn(username, password);
+      console.log("error",error)
+      
+      if (error) {
+        // Handle custom error messages from your Node server
+        toast.error(error.message || 'Authentication failed');
       } else {
-        const { error } = await signUp(email, password);
-        if (error) {
-          if (error.message.includes('User already registered')) {
-            toast.error('This email is already registered. Please login instead.');
-          } else {
-            toast.error(error.message);
-          }
-        } else {
-          toast.success('Account created successfully! Please login.');
-          setIsLogin(true);
-        }
+        toast.success('Welcome back!');
+        navigate('/dashboard');
       }
     } catch (error) {
-      toast.error('An unexpected error occurred. Please try again.');
+      toast.error('Unable to connect to the server. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -125,7 +106,6 @@ export default function Auth() {
 
   const FormPanel = (
     <div className="w-full lg:w-[480px] flex flex-col justify-center px-8 lg:px-12 py-12 bg-card relative">
-      {/* Layout Toggle Button */}
       <button
         onClick={() => setIsFormOnLeft(!isFormOnLeft)}
         className="absolute top-4 right-4 p-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors text-muted-foreground hover:text-foreground hidden lg:flex items-center gap-2 text-sm"
@@ -136,7 +116,6 @@ export default function Auth() {
       </button>
 
       <div className="mx-auto w-full max-w-sm">
-        {/* Logo */}
         <div className="flex items-center gap-3 mb-8">
           <div className="bg-white rounded-xl p-2 shadow-md">
             <img src={reslLogo} alt="RESL Logo" className="h-10 w-auto object-contain" />
@@ -147,33 +126,27 @@ export default function Auth() {
           </div>
         </div>
 
-        {/* Title */}
         <div className="mb-8">
-          <h2 className="text-2xl font-bold text-foreground">
-            {isLogin ? 'Welcome Back' : 'Create Account'}
-          </h2>
+          <h2 className="text-2xl font-bold text-foreground">Welcome Back</h2>
           <p className="text-muted-foreground mt-1">
-            {isLogin 
-              ? 'Enter your credentials to access your account' 
-              : 'Fill in the details to create your account'}
+            Enter your employee credentials to access the system
           </p>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
-            <Label htmlFor="email">Email Address</Label>
+            <Label htmlFor="username">Username</Label>
             <Input
-              id="email"
-              type="email"
-              placeholder="you@company.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className={errors.email ? 'border-destructive' : ''}
+              id="username"
+              type="text"
+              placeholder="e.g. 062003"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className={errors.username ? 'border-destructive' : ''}
               disabled={isSubmitting}
             />
-            {errors.email && (
-              <p className="text-xs text-destructive">{errors.email}</p>
+            {errors.username && (
+              <p className="text-xs text-destructive">{errors.username}</p>
             )}
           </div>
 
@@ -209,33 +182,13 @@ export default function Auth() {
           >
             {isSubmitting ? (
               <Loader2 className="w-4 h-4 animate-spin" />
-            ) : isLogin ? (
-              <LogIn className="w-4 h-4" />
             ) : (
-              <UserPlus className="w-4 h-4" />
+              <LogIn className="w-4 h-4" />
             )}
-            {isSubmitting ? 'Please wait...' : isLogin ? 'Sign In' : 'Create Account'}
+            {isSubmitting ? 'Verifying...' : 'Sign In'}
           </Button>
         </form>
 
-        {/* Toggle */}
-        <div className="mt-6 text-center">
-          <p className="text-sm text-muted-foreground">
-            {isLogin ? "Don't have an account?" : 'Already have an account?'}
-            <button
-              type="button"
-              onClick={() => {
-                setIsLogin(!isLogin);
-                setErrors({});
-              }}
-              className="ml-1 text-accent hover:underline font-medium"
-            >
-              {isLogin ? 'Sign Up' : 'Sign In'}
-            </button>
-          </p>
-        </div>
-
-        {/* Developer Info */}
         <div className="mt-8 text-center border-t border-border pt-4">
           <p className="text-xs text-muted-foreground">Developed By Sharvi Infotech Pvt. Ltd</p>
           <p className="text-xs text-muted-foreground mt-1">Version 1.00</p>
@@ -252,11 +205,8 @@ export default function Auth() {
         backgroundPosition: 'right center',
       }}
     >
-      {/* Gradient Overlay */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary/80 via-primary/60 to-accent/50" />
       
-      
-      {/* Content */}
       <div className="relative z-10 text-center text-white p-12 max-w-lg">
         <h2 className="text-3xl font-bold mb-4">Gate Entry Management System</h2>
         <p className="text-white/80 text-lg mb-6">
@@ -264,36 +214,16 @@ export default function Auth() {
         </p>
         
         <div className="flex flex-wrap justify-center gap-3">
-          <div className="bg-white/10 backdrop-blur-sm rounded-full px-4 py-2">
-            <p className="text-sm font-medium">Inward PO Reference</p>
-          </div>
-          <div className="bg-white/10 backdrop-blur-sm rounded-full px-4 py-2">
-            <p className="text-sm font-medium">Outward Billing</p>
-          </div>
-          <div className="bg-white/10 backdrop-blur-sm rounded-full px-4 py-2">
-            <p className="text-sm font-medium">Without Reference</p>
-          </div>
-          <div className="bg-white/10 backdrop-blur-sm rounded-full px-4 py-2">
-            <p className="text-sm font-medium">Subcontracting</p>
-          </div>
-          <div className="bg-white/10 backdrop-blur-sm rounded-full px-4 py-2">
-            <p className="text-sm font-medium">RGP</p>
-          </div>
-          <div className="bg-white/10 backdrop-blur-sm rounded-full px-4 py-2">
-            <p className="text-sm font-medium">NRGP</p>
-          </div>
-          <div className="bg-white/10 backdrop-blur-sm rounded-full px-4 py-2">
-            <p className="text-sm font-medium">Real-Time SAP Sync</p>
-          </div>
+          {["Inward PO Reference", "Outward Billing", "Without Reference", "Subcontracting", "RGP", "NRGP", "Real-Time SAP Sync"].map((feature) => (
+            <div key={feature} className="bg-white/10 backdrop-blur-sm rounded-full px-4 py-2">
+              <p className="text-sm font-medium">{feature}</p>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Image Navigation */}
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 z-20">
-        <button
-          onClick={prevImage}
-          className="p-2 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm transition-colors"
-        >
+        <button onClick={prevImage} className="p-2 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm transition-colors">
           <ChevronLeft className="w-5 h-5 text-white" />
         </button>
         <div className="flex gap-2">
@@ -307,10 +237,7 @@ export default function Auth() {
             />
           ))}
         </div>
-        <button
-          onClick={nextImage}
-          className="p-2 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm transition-colors"
-        >
+        <button onClick={nextImage} className="p-2 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm transition-colors">
           <ChevronRight className="w-5 h-5 text-white" />
         </button>
       </div>
@@ -320,15 +247,9 @@ export default function Auth() {
   return (
     <div className="min-h-screen flex">
       {isFormOnLeft ? (
-        <>
-          {FormPanel}
-          {ImagePanel}
-        </>
+        <>{FormPanel}{ImagePanel}</>
       ) : (
-        <>
-          {ImagePanel}
-          {FormPanel}
-        </>
+        <>{ImagePanel}{FormPanel}</>
       )}
     </div>
   );

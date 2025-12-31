@@ -1,8 +1,7 @@
-import { Search, Sun, Moon, User, LogOut } from 'lucide-react';
-import { useState, ReactNode } from 'react';
+import { Sun, Moon, User, LogOut, ChevronDown } from 'lucide-react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,18 +9,37 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useAuth } from '@/contexts/AuthContext';
 import { CastButton } from '@/components/shared/CastButton';
-
-interface AppHeaderProps {
-  sidebarTrigger?: ReactNode;
-  collapseTrigger?: ReactNode;
-}
-
-export function AppHeader({ sidebarTrigger, collapseTrigger }: AppHeaderProps) {
+import { useEffect } from 'react';
+export function AppHeader({ sidebarTrigger, collapseTrigger }: any) {
   const navigate = useNavigate();
-  const { signOut, webUser } = useAuth();
   const [isDark, setIsDark] = useState(false);
+
+  // 1. Pull everything from AuthContext
+  // Note: Remove the local useState for selectedPlant/Role to fix the error
+  const { 
+    user, 
+    signOut, 
+    selectedPlant, 
+    setSelectedPlant, 
+    selectedRole, 
+    setSelectedRole 
+  } = useAuth();
+
+  // 2. Derive available roles based on the global selectedPlant
+  const availableRoles = useMemo(() => {
+    if (!selectedPlant || !user?.PLANTS) return [];
+    const plantObj = user.PLANTS.find((p) => String(p.PLANT) === String(selectedPlant));
+    return plantObj?.ROLES || [];
+  }, [selectedPlant, user]);
 
   const toggleTheme = () => {
     setIsDark(!isDark);
@@ -33,69 +51,92 @@ export function AppHeader({ sidebarTrigger, collapseTrigger }: AppHeaderProps) {
     navigate('/auth');
   };
 
-  const handleProfile = () => {
-    navigate('/profile');
-  };
-
-  const handleSettings = () => {
-    navigate('/settings');
-  };
-
   return (
     <header className="h-14 border-b border-border bg-card px-4 flex items-center justify-between gap-4 flex-shrink-0">
-      {/* Left Section */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-4">
         {sidebarTrigger}
         {collapseTrigger}
-        {/* Search */}
-        <div className="relative hidden sm:block">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search..."
-            className="pl-9 bg-background w-48 md:w-64 h-9 text-sm"
-          />
-        </div>
+        
+        {/* Plant Dropdown */}
+        <Select 
+          value={selectedPlant}
+          onValueChange={(val) => {
+            setSelectedPlant(val);
+            // When plant changes, auto-select the first role of that new plant
+            const newPlant = user?.PLANTS.find(p => String(p.PLANT) === val);
+            if (newPlant && newPlant.ROLES.length > 0) {
+              setSelectedRole(newPlant.ROLES[0].ROLE);
+            } else {
+              setSelectedRole("");
+            }
+          }}
+        >
+          <SelectTrigger className="w-[140px] h-9">
+            <SelectValue placeholder="Select Plant" />
+          </SelectTrigger>
+          <SelectContent>
+            {user?.PLANTS?.map((p) => (
+              <SelectItem key={p.PLANT} value={String(p.PLANT)}>
+                Plant {p.PLANT}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Role Dropdown */}
+        <Select 
+          disabled={!selectedPlant} 
+          onValueChange={setSelectedRole}
+          value={selectedRole}
+        >
+          <SelectTrigger className="w-[160px] h-9">
+            <SelectValue placeholder="Select Role" />
+          </SelectTrigger>
+          <SelectContent>
+            {availableRoles.length > 0 ? (
+              availableRoles.map((r) => (
+                r.ROLE && (
+                  <SelectItem key={r.ROLE} value={String(r.ROLE)}>
+                    {r.ROLE}
+                  </SelectItem>
+                )
+              ))
+            ) : (
+              <div className="p-2 text-xs text-muted-foreground">No roles available</div>
+            )}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Right Section */}
       <div className="flex items-center gap-1">
-        {/* Mobile Search */}
-        <Button variant="ghost" size="icon" className="text-muted-foreground sm:hidden h-9 w-9">
-          <Search className="w-4 h-4" />
-        </Button>
-
-        {/* Cast Button */}
         <CastButton />
-
-        {/* Theme Toggle */}
         <Button variant="ghost" size="icon" onClick={toggleTheme} className="text-muted-foreground h-9 w-9">
           {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
         </Button>
 
-        {/* User Menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="rounded-full h-9 w-9">
               <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center">
-                <span className="text-xs font-bold text-primary-foreground">{webUser.charAt(0).toUpperCase()}</span>
+                <span className="text-xs font-bold text-primary-foreground">
+                  {user?.FIRST_NAME?.charAt(0) || 'U'}
+                </span>
               </div>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
-            <div className="px-2 py-1.5 text-sm font-medium text-foreground">{webUser}</div>
+            <div className="px-2 py-1.5">
+              <p className="text-sm font-medium">{user?.FIRST_NAME} {user?.LAST_NAME}</p>
+              <p className="text-xs text-muted-foreground">{user?.EMAIL}</p>
+            </div>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleProfile} className="text-sm cursor-pointer">
-              <User className="w-4 h-4 mr-2" />
-              Profile
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleSettings} className="text-sm cursor-pointer">
-              Settings
+            <DropdownMenuItem onClick={() => navigate('/profile')} className="cursor-pointer">
+              <User className="w-4 h-4 mr-2" /> Profile
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout} className="text-destructive text-sm cursor-pointer">
-              <LogOut className="w-4 h-4 mr-2" />
-              Logout
+            <DropdownMenuItem onClick={handleLogout} className="text-destructive cursor-pointer">
+              <LogOut className="w-4 h-4 mr-2" /> Logout
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
