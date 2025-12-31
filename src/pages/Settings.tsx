@@ -12,6 +12,8 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import Swal from "sweetalert2";
+
 import { toast } from 'sonner';
 import service from "../services/generalservice.js";
 import { useEffect } from 'react';
@@ -26,7 +28,7 @@ interface User {
   emailId: string;
   contactNumber: string;
   role: string;
-  password?: string;   // 👈 OPTIONAL
+  password?: string;
 
   status: 'Active' | 'Inactive';
 }
@@ -64,9 +66,6 @@ const plantOptions = [
   { value: 'P004', label: 'P004 - Bangalore Plant' },
 ];
 
-
-
-
 const initialRoles: Role[] = [
   { id: '1', roleName: 'Admin', roleDescription: 'Full system access with all permissions. Can manage users, roles, and system settings.', permissions: allScreenPermissions.map(p => p.key) },
   { id: '2', roleName: 'Security', roleDescription: 'Gate security operations for inward and outward entries.', permissions: ['dashboard', 'inward-po', 'inward-subcontracting', 'inward-without-ref', 'outward-billing', 'outward-non-returnable', 'outward-returnable', 'exit', 'display', 'print'] },
@@ -75,13 +74,17 @@ const initialRoles: Role[] = [
   { id: '5', roleName: 'Viewer', roleDescription: 'Read-only access to view entries and reports.', permissions: ['dashboard', 'display', 'reports'] },
 ];
 
+
+
+
 export default function Settings() {
   const [activeTab, setActiveTab] = useState('users');
   const [userSearchQuery, setUserSearchQuery] = useState('');
 
   // Users & Roles
   const [users, setUsers] = useState<User[]>([]);
-  const [roles, setRoles] = useState<Role[]>(initialRoles);
+  const [roles, setRoles] = useState<Role[]>([]);
+
 
   // Filtered users based on search
   const filteredUsers = users.filter(user =>
@@ -335,25 +338,52 @@ export default function Settings() {
     setIsRoleDialogOpen(true);
   };
 
-  const handleSaveRole = () => {
+  const handleSaveRole = async () => {
     if (!roleForm.roleName || !roleForm.roleDescription) {
-      toast.error('Please fill in all required fields');
+      toast.error("Please fill in all required fields");
       return;
     }
 
-    if (editingRole) {
-      setRoles(roles.map(r => r.id === editingRole.id ? { ...r, ...roleForm } : r));
-      toast.success('Role updated successfully!');
-    } else {
-      const newRole: Role = {
-        id: Date.now().toString(),
-        ...roleForm,
-      };
-      setRoles([...roles, newRole]);
-      toast.success('Role added successfully!');
+    const payload = {
+      CREATE: {
+        ROLE: roleForm.roleName,
+        ROLE_DES: roleForm.roleDescription,
+        ACTIVITY: roleForm.permissions.map(p => ({
+          ACTIVITY: p
+        }))
+      }
+    };
+
+    try {
+      const res = await service.UserRoleCreation(payload);
+      if (res.STATUS === "SUCCESS") {
+        Swal.fire(
+          "Success",
+          "User Role created successfully",
+          "success"
+        );
+
+        // UI update (simple)
+        setRoles(prev => [
+          ...prev,
+          {
+            id: Date.now().toString(),
+            roleName: roleForm.roleName,
+            roleDescription: roleForm.roleDescription,
+            permissions: roleForm.permissions
+          }
+        ]);
+
+        setIsRoleDialogOpen(false);
+      } else {
+        toast.error(res.MESSAGE || "Failed");
+      }
+    } catch (err) {
+      toast.error("API Error");
     }
-    setIsRoleDialogOpen(false);
   };
+
+
 
   const handleDeleteRole = (id: string) => {
     const roleToDelete = roles.find(r => r.id === id);

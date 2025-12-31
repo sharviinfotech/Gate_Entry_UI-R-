@@ -101,7 +101,7 @@ const backendNodejs = {
         return res.json();
     },
 
-     save_Exit_Cancel: async (data) => {
+    save_Exit_Cancel: async (data) => {
         const res = await fetch(`${BASE_URL}api/external/Gate_Entry/save_Exit_Cancel`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -109,7 +109,7 @@ const backendNodejs = {
         });
         return res.json();
     },
-      UserEdit: async (data) => {
+    UserEdit: async (data) => {
         const res = await fetch(`${BASE_URL}api/external/Gate_Entry/EditUser`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -117,9 +117,17 @@ const backendNodejs = {
         });
         return res.json();
     },
-       Login_Submit_Authentication: async (data) => {
+    Login_Submit_Authentication: async (data) => {
         const res = await fetch(`${BASE_URL}api/external/Gate_Entry/Login_Submit_Authentication`, {
             method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+        });
+        return res.json();
+    },
+    UserRoleCreation: async (data) => {
+        const res = await fetch(`${BASE_URL}api/external/Gate_Entry/UserRoleCreation`, {
+            method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data),
         });
