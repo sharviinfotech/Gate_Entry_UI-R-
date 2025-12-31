@@ -1,98 +1,143 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
+import { createContext, useContext, useEffect, useState, ReactNode,useMemo } from 'react';
+import Swal from "sweetalert2";
+// Define the structure based on your API response
+interface Plant {
+  PLANT: string;
+  ROLES: Array<{
+    ROLE: string;
+    ACTIVITIES: Array<{ ACTIVITY: string }>;
+  }>;
+}
+
+interface UserData {
+  USER: string;
+  FIRST_NAME: string;
+  LAST_NAME: string;
+  EMAIL: string;
+  STATUS: string;
+  CONTACT: string;
+  PLANTS: Plant[];
+}
 
 interface AuthContextType {
-  user: User | null;
-  session: Session | null;
+  user: UserData | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signOut: () => Promise<void>;
+  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signOut: () => void;
   webUser: string;
+  selectedPlant: string;
+  selectedRole: string;
+  setSelectedPlant: (plant: string) => void;
+  setSelectedRole: (role: string) => void;
+  activities: string[];
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
-
+const [selectedPlant, setSelectedPlant] = useState<string>("");
+  const [selectedRole, setSelectedRole] = useState<string>("");
   useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
-      }
-    );
-
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    // Check if user is already logged in via localStorage
+    const savedUser = localStorage.getItem('gate_entry_user');
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
+    }
+    setLoading(false);
   }, []);
-
-  const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    return { error };
-  };
-
-  const signUp = async (email: string, password: string) => {
-    const redirectUrl = `${window.location.origin}/`;
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-      },
-    });
-    return { error };
-  };
-
-  const signOut = async () => {
-    try {
-      // In some cases the backend can respond with "session_not_found" if the session was already invalidated.
-      // We still treat it as a successful logout and clear local state.
-      const { error } = await supabase.auth.signOut();
-      if (error && !String(error.message || '').includes('session_not_found')) {
-        console.warn('signOut error:', error);
+// Initialize defaults when user logs in
+  useEffect(() => {
+    
+    const savedUser = localStorage.getItem('gate_entry_user');
+    if (savedUser) {
+      const parsed = JSON.parse(savedUser);
+      setUser(parsed);
+      
+      // Auto-select first plant and its first role
+      if (parsed.PLANTS?.length > 0) {
+        const firstPlant = parsed.PLANTS[0];
+        setSelectedPlant(firstPlant.PLANT);
+        if (firstPlant.ROLES?.length > 0) {
+          setSelectedRole(firstPlant.ROLES[0].ROLE);
+        }
       }
-    } finally {
-      setSession(null);
-      setUser(null);
+    }
+    setLoading(false);
+  }, []);
+  // Derive activities based on selection
+  const activities = useMemo(() => {
+    if (!user || !selectedPlant || !selectedRole) return [];
+    const plant = user.PLANTS.find(p => p.PLANT === selectedPlant);
+    const role = plant?.ROLES.find(r => r.ROLE === selectedRole);
+    return role?.ACTIVITIES.map(a => a.ACTIVITY) || [];
+  }, [user, selectedPlant, selectedRole]);
+  const signIn = async (username: string, password: string) => {
+    try {
+      const response = await fetch('http://localhost:3005/api/external/Gate_Entry/Login_Submit_Authentication', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          LOGIN: {
+            USER: username,
+            PASSWORD: password
+          }
+        }),
+      });
+
+      const data = await response.json();
+      console.log("response",response,data)
+
+      if (response.ok && data.USER) {
+        localStorage.setItem('gate_entry_user', JSON.stringify(data));
+        setUser(data);
+        // FORCE SELECTION TO INDEX 0 ON LOGIN
+      if (data.PLANTS && data.PLANTS.length > 0) {
+        const firstPlant = data.PLANTS[0];
+        setSelectedPlant(String(firstPlant.PLANT)); // Force index 0
+
+        if (firstPlant.ROLES && firstPlant.ROLES.length > 0) {
+          setSelectedRole(firstPlant.ROLES[0].ROLE); // Force index 0
+        } else {
+          setSelectedRole("");
+        }
+      }
+
+      return { error: null };
+        return { error: null };
+      } else {
+          Swal.fire({
+                    title: "Error",
+                    text: data.MESSAGE,
+                    icon: "error",
+                    confirmButtonColor: "#d33",
+                  });
+        return
+         { error: { message: data.MESSAGE || 'Invalid Credentials' } };
+      }
+    } catch (err) {
+      return { error: { message: 'Server connection failed' } };
     }
   };
 
-  // Extract username from email or use email as web user
-  const webUser = user?.email?.split('@')[0] || 'Guest';
-
-  const value = {
-    user,
-    session,
-    loading,
-    signIn,
-    signUp,
-    signOut,
-    webUser,
+  const signOut = () => {
+    localStorage.removeItem('gate_entry_user');
+    setUser(null);
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  const webUser = user ? `${user.FIRST_NAME} ${user.LAST_NAME}` : 'Guest';
+
+  return (
+    <AuthContext.Provider value={{ user, selectedPlant, setSelectedPlant, 
+      selectedRole, setSelectedRole, activities,loading, signIn, signOut, webUser }}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (context === undefined) throw new Error('useAuth must be used within an AuthProvider');
   return context;
 }

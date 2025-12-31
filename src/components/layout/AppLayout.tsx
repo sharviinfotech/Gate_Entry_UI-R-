@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+// import { AppSidebar, SidebarTrigger, SidebarCollapseTrigger, UserRole } from './AppSidebar';
 import { AppSidebar, SidebarTrigger, SidebarCollapseTrigger, UserRole } from './AppSidebar';
 import { AppHeader } from './AppHeader';
 import { useAuth } from '@/contexts/AuthContext';
@@ -55,8 +56,7 @@ export function AppLayout() {
         onToggle={toggleSidebar} 
         isCollapsed={sidebarCollapsed}
         onCollapse={toggleCollapse}
-        currentRole={currentRole}
-        onRoleChange={setCurrentRole}
+        
       />
       <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
         <AppHeader 
