@@ -22,12 +22,12 @@ import { useEffect } from 'react';
 
 interface User {
   id: string;
-  plant: string;
+  plant: string[];
   userId: string;
   fullName: string;
   emailId: string;
   contactNumber: string;
-  role: string;
+  role: string[];
   password?: string;
 
   status: 'Active' | 'Inactive';
@@ -42,38 +42,22 @@ interface Role {
 
 // All sidebar screen permissions
 const allScreenPermissions = [
-  { key: 'dashboard', label: 'Dashboard' },
-  { key: 'inward-po', label: 'Inward - With Reference PO' },
-  { key: 'inward-subcontracting', label: 'Inward - Subcontracting' },
-  { key: 'inward-without-ref', label: 'Inward - Without Reference' },
-  { key: 'outward-billing', label: 'Outward - Billing Reference' },
-  { key: 'outward-non-returnable', label: 'Outward - Non-Returnable' },
-  { key: 'outward-returnable', label: 'Outward - Returnable' },
-  { key: 'change', label: 'Change Entry' },
-  { key: 'display', label: 'Display Entry' },
-  { key: 'exit', label: 'Vehicle Exit' },
-  { key: 'cancel', label: 'Cancel Entry' },
-  { key: 'print', label: 'Print Entry' },
-  { key: 'reports', label: 'Reports' },
-  { key: 'settings', label: 'Settings' },
-  { key: 'help', label: 'Help & Support' },
+  { key: 'Dashboard', label: 'Dashboard' },
+  { key: 'InwardPOReference', label: 'Inward - With Reference PO' },
+  { key: 'InwardSubcontracting', label: 'Inward - Subcontracting' },
+  { key: 'InwardWithoutReference', label: 'Inward - Without Reference' },
+  { key: 'OutwardBillingReference', label: 'Outward - Billing Reference' },
+  { key: 'OutwardNonReturnable', label: 'Outward - Non-Returnable' },
+  { key: 'OutwardReturnable', label: 'Outward - Returnable' },
+  { key: 'ChangeEntry', label: 'Change Entry' },
+  { key: 'Display', label: 'Display Entry' },
+  { key: 'VehicleExit', label: 'Vehicle Exit' },
+  { key: 'Cancel', label: 'Cancel Entry' },
+  { key: 'Print', label: 'Print Entry' },
+  { key: 'Report', label: 'Reports' },
+  { key: 'Settings', label: 'Settings' },
+  { key: 'Help', label: 'Help & Support' },
 ];
-
-const plantOptions = [
-  { value: 'P001', label: 'P001 - Mumbai Plant' },
-  { value: 'P002', label: 'P002 - Delhi Plant' },
-  { value: 'P003', label: 'P003 - Chennai Plant' },
-  { value: 'P004', label: 'P004 - Bangalore Plant' },
-];
-
-const initialRoles: Role[] = [
-  { id: '1', roleName: 'Admin', roleDescription: 'Full system access with all permissions. Can manage users, roles, and system settings.', permissions: allScreenPermissions.map(p => p.key) },
-  { id: '2', roleName: 'Security', roleDescription: 'Gate security operations for inward and outward entries.', permissions: ['dashboard', 'inward-po', 'inward-subcontracting', 'inward-without-ref', 'outward-billing', 'outward-non-returnable', 'outward-returnable', 'exit', 'display', 'print'] },
-  { id: '3', roleName: 'Stores', roleDescription: 'Stores management operations including inventory and material handling.', permissions: ['dashboard', 'inward-po', 'inward-subcontracting', 'change', 'display', 'reports'] },
-  { id: '4', roleName: 'Finance', roleDescription: 'Reports, analytics, and financial data access only.', permissions: ['dashboard', 'display', 'reports', 'print'] },
-  { id: '5', roleName: 'Viewer', roleDescription: 'Read-only access to view entries and reports.', permissions: ['dashboard', 'display', 'reports'] },
-];
-
 
 
 
@@ -81,9 +65,16 @@ export default function Settings() {
   const [activeTab, setActiveTab] = useState('users');
   const [userSearchQuery, setUserSearchQuery] = useState('');
 
+  const [plantOptions, setPlantOptions] = useState<
+    { value: string; label: string }[]
+  >([]);
+
   // Users & Roles
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
+  const [plantRoles, setPlantRoles] = useState<Role[]>([]);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+
 
 
   // Filtered users based on search
@@ -97,13 +88,13 @@ export default function Settings() {
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [userForm, setUserForm] = useState({
-    plant: '',
+    plant: [] as string[],
     userId: '',
     fullName: '',
     emailId: '',
     contactNumber: '',
     password: '',
-    role: '',
+    role: [] as string[],
     status: 'Active' as 'Active' | 'Inactive',
   });
 
@@ -121,22 +112,96 @@ export default function Settings() {
   const [selectedRoleForPermissions, setSelectedRoleForPermissions] = useState<Role | null>(null);
   const [tempPermissions, setTempPermissions] = useState<string[]>([]);
 
+
+  const fetchPlants = async () => {
+    console.log("fetchPlants() triggered");
+
+    try {
+      const res = await service.UserPlant();
+
+      console.log("fetchPlants API response:", res);
+
+      if (!Array.isArray(res)) {
+        toast.error("Invalid plant data");
+        return;
+      }
+
+      const options = res.map((item: any) => ({
+        value: item.WERKS,
+        label: `${item.WERKS} - ${item.NAME1}`,
+      }));
+
+      console.log("plantOptions mapped:", options);
+
+      setPlantOptions(options);
+    } catch (error) {
+      console.error(" fetchPlants error:", error);
+      toast.error("Failed to fetch plants");
+    }
+  };
+
+  const fetchRolesByPlants = async (plants: string[]) => {
+    if (!plants || plants.length === 0) {
+      setPlantRoles([]);
+      return;
+    }
+
+    try {
+      // ✅ Build payload exactly as API expects
+      const payload = plants.map(plant => ({
+        PLANT: plant
+      }));
+
+      console.log("Roles payload:", payload);
+
+      const res = await service.UserRole(payload);
+
+      if (!Array.isArray(res)) {
+        console.error("Invalid roles response", res);
+        return;
+      }
+
+      // ✅ Flatten roles across all plants
+      const allRoles: Role[] = res.flatMap((item: any) =>
+        Array.isArray(item.ROLES)
+          ? item.ROLES.map((r: any) => ({
+            id: `${r.ROLE}-${r.WERKS}`,
+            roleName: r.ROLE,
+            werks: r.WERKS,
+            roleDescription: "",
+            permissions: [],
+          }))
+          : []
+      );
+
+      // ✅ Remove duplicates (ROLE + WERKS)
+      const uniqueRoles = Array.from(
+        new Map(allRoles.map(r => [r.id, r])).values()
+      );
+
+      setPlantRoles(uniqueRoles);
+    } catch (err) {
+      console.error("fetchRolesByPlants error:", err);
+    }
+  };
+
+
+
   // User handlers
   const openAddUserDialog = () => {
     setEditingUser(null);
     setUserForm({
-      plant: '',
+      plant: [],
       userId: '',
       fullName: '',
       emailId: '',
       contactNumber: '',
-      role: '',
+      role: [],
       password: '',
       status: 'Active',
     });
     setIsUserDialogOpen(true);
   };
-
 
 
   const handleSaveUser = async () => {
@@ -147,9 +212,7 @@ export default function Settings() {
       !userForm.emailId ||
       !userForm.contactNumber ||
       !userForm.role ||
-      !userForm.password ||
-      !userForm.status ||
-      (!editingUser && !userForm.password)
+      !userForm.password
     ) {
       toast.error("Please fill in all required fields");
       return;
@@ -158,98 +221,126 @@ export default function Settings() {
     const [firstName, ...lastNameArr] = userForm.fullName.trim().split(" ");
     const lastName = lastNameArr.join(" ") || "";
 
+    const payload = {
+      CREATE: {
+        USER: userForm.userId,
+        FIRST_NAME: firstName,
+        LAST_NAME: lastName,
+        PLANTS: userForm.plant.map(p => ({ WERKS: p })),
+        ROLES: userForm.plant.flatMap(p =>
+          userForm.role.map(r => ({ WERKS: p, ROLE: r }))
+        ),
+        EMAIL: userForm.emailId,
+        CONTACT: userForm.contactNumber,
+        PASSWORD: userForm.password,
+        STATUS: userForm.status,
+      },
+    };
+
+
+    console.log("FINAL PAYLOAD:", payload);
+
     try {
-      // ================= EDIT USER =================
-      if (editingUser) {
-        const payload = {
-          EDIT: {
-            USER: userForm.userId,
-            FIRST_NAME: firstName,
-            LAST_NAME: lastName,
-            PLANT: userForm.plant,
-            ROLE: userForm.role,
-            EMAIL: userForm.emailId,
-            CONTACT: userForm.contactNumber,
-            PASSWORD: userForm.password,  // or empty if backend ignores
-            STATUS: userForm.status
-
-
-          },
-        };
-
-        if (userForm.password?.trim()) {
-          payload.EDIT.PASSWORD = userForm.password;
-        }
-
-        const res = await service.UserEdit(payload);
-
-        if (res?.STATUS === "TRUE") {
-          toast.success(res.MESSAGE || "User updated successfully");
-
-          // 🔥 Update UI list
-          setUsers((prev) =>
-            prev.map((u) =>
-              u.id === editingUser.id
-                ? {
-                  ...u,
-                  plant: userForm.plant,
-                  fullName: userForm.fullName,
-                  emailId: userForm.emailId,
-                  contactNumber: userForm.contactNumber,
-                  role: userForm.role,
-                }
-                : u
-            )
-          );
-
-          setIsUserDialogOpen(false);
-          setEditingUser(null);
-        } else {
-          toast.error(res?.MESSAGE || "User update failed");
-        }
-
-        return;
-      }
-
-      // ================= ADD USER =================
-      const payload = {
-        CREATE: {
-          USER: userForm.userId,
-          FIRST_NAME: firstName,
-          LAST_NAME: lastName,
-          PLANT: userForm.plant,
-          ROLE: userForm.role,
-          EMAIL: userForm.emailId,
-          CONTACT: userForm.contactNumber,
-          PASSWORD: userForm.password,
-          STATUS: userForm.status
-
-        },
-      };
-
       const res = await service.AddUser(payload);
-
-      if (res?.STATUS === "TRUE") {
-        toast.success(res.MESSAGE || "User created successfully");
-
-        setUsers((prev) => [
-          ...prev,
-          {
-            id: userForm.userId,
-            plant: userForm.plant,
-            userId: userForm.userId,
-            fullName: userForm.fullName,
-            emailId: userForm.emailId,
-            contactNumber: userForm.contactNumber,
-            role: userForm.role,
-            status: userForm.status,
-
-          },
-        ]);
-
+      if (res.STATUS === "SUCCESS") {
+        Swal.fire(
+          "Success",
+          "User created successfully",
+          "success"
+        );
         setIsUserDialogOpen(false);
+        fetchUsers();
       } else {
         toast.error(res?.MESSAGE || "User creation failed");
+      }
+    } catch {
+      toast.error("Server error");
+    }
+  };
+
+
+
+
+  const handleUpdateUser = async () => {
+    if (
+      !userForm.plant ||
+      !userForm.userId ||
+      !userForm.fullName ||
+      !userForm.emailId ||
+      !userForm.contactNumber ||
+      !userForm.role ||
+      !userForm.status
+    ) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    const [firstName, ...lastNameArr] = userForm.fullName.trim().split(" ");
+    const lastName = lastNameArr.join(" ") || "";
+
+    const payload: any = {
+      EDIT: {
+        USER: userForm.userId,
+        FIRST_NAME: firstName,
+        LAST_NAME: lastName,
+
+        // map selected plants
+        PLANTS: userForm.plant.map(p => ({ WERKS: p })),
+
+        // map roles for each selected plant
+        ROLES: userForm.role.flatMap(roleName =>
+          userForm.plant.map(plant => ({ WERKS: plant, ROLE: roleName }))
+        ),
+
+        EMAIL: userForm.emailId,
+        CONTACT: userForm.contactNumber,
+        STATUS: userForm.status,
+      },
+    };
+
+    if (userForm.password?.trim()) {
+      payload.EDIT.PASSWORD = userForm.password;
+    }
+
+
+    // 🔐 password optional
+    if (userForm.password?.trim()) {
+      payload.EDIT.PASSWORD = userForm.password;
+    }
+
+    console.log("EDIT PAYLOAD:", payload);
+
+    try {
+      const res = await service.UserEdit(payload);
+
+      if (res.STATUS === "SUCCESS") {
+        Swal.fire(
+          "Success",
+          "User updated successfully",
+          "success"
+        );
+
+        setUsers(prev =>
+          prev.map(u =>
+            u.id === editingUser?.id
+              ? {
+                ...u,
+                plant: [...userForm.plant],
+                fullName: userForm.fullName,
+                emailId: userForm.emailId,
+                contactNumber: userForm.contactNumber,
+                role: [...userForm.role],
+                status: userForm.status,
+              }
+              : u
+          )
+        );
+
+
+        setIsUserDialogOpen(false);
+        setEditingUser(null);
+      } else {
+        toast.error(res?.MESSAGE || "User update failed");
       }
     } catch (error) {
       console.error(error);
@@ -257,15 +348,20 @@ export default function Settings() {
     }
   };
 
+
+
+
+
+
   const openEditUserDialog = (user: User) => {
     setEditingUser(user);
     setUserForm({
-      plant: user.plant,
+      plant: [...user.plant],
       userId: user.userId,
       fullName: user.fullName,
       emailId: user.emailId,
       contactNumber: user.contactNumber,
-      role: user.role,
+      role: [...user.role],
       password: user.password,
       status: user.status,
     });
@@ -279,18 +375,34 @@ export default function Settings() {
       const res = await service.DisplayTable();
 
       if (Array.isArray(res)) {
-        const mappedUsers: User[] = res.map((item) => ({
-          id: item.ZUSER,
-          plant: item.ZWERKS,
-          userId: item.ZUSER,
-          fullName: `${item.ZFIRST_NAME} ${item.ZLAST_NAME}`,
-          emailId: item.ZEMAIL,
-          contactNumber: item.ZCONTACT,
-          role: item.ZROLE,
-          status: item.ZSTATUS === "Inactive" ? "Inactive" : "Active",
-        }));
+        const userMap: Record<string, User> = {};
 
-        setUsers(mappedUsers);
+        res.forEach((item) => {
+          if (!userMap[item.ZUSER]) {
+            userMap[item.ZUSER] = {
+              id: item.ZUSER,
+              userId: item.ZUSER,
+              fullName: `${item.ZFIRST_NAME} ${item.ZLAST_NAME}`,
+              emailId: item.ZEMAIL,
+              contactNumber: item.ZCONTACT,
+              plant: [],
+              role: [],
+              status: item.ZSTATUS === "Inactive" ? "Inactive" : "Active",
+            };
+          }
+
+          // Add plant if not already present
+          if (item.ZWERKS && !userMap[item.ZUSER].plant.includes(item.ZWERKS)) {
+            userMap[item.ZUSER].plant.push(item.ZWERKS);
+          }
+
+          // Add role if not empty and not already present
+          if (item.ZROLE && !userMap[item.ZUSER].role.includes(item.ZROLE)) {
+            userMap[item.ZUSER].role.push(item.ZROLE);
+          }
+        });
+
+        setUsers(Object.values(userMap));
       } else {
         toast.error("Invalid user data received");
       }
@@ -299,8 +411,13 @@ export default function Settings() {
       toast.error("Failed to fetch users");
     }
   };
+
+
+
   useEffect(() => {
     fetchUsers();
+    fetchRoles();
+    fetchPlants();
   }, []);
 
 
@@ -382,6 +499,82 @@ export default function Settings() {
       toast.error("API Error");
     }
   };
+
+  const buildEditPayload = () => ({
+    EDIT: {
+      ROLE: roleForm.roleName,
+      ROLE_DES: roleForm.roleDescription,
+      ACTIVITY: roleForm.permissions.map((p) => ({
+        ACTIVITY: p,
+      })),
+    },
+  });
+
+
+  const handleEditRole = async () => {
+    try {
+      const payload = buildEditPayload();
+
+      const res = await service.UserRoleEdit(payload);
+
+      if (res.STATUS === "SUCCESS") {
+        Swal.fire(
+          "Success",
+          "User Role Updated successfully",
+          "success"
+        );
+        setIsRoleDialogOpen(false);
+        setEditingRole(null);
+        fetchRoles();
+
+      } else {
+        toast.error(res.MESSAGE || "Something went wrong");
+      }
+    } catch (error) {
+      toast.error("API Error");
+      console.error(error);
+    }
+  };
+
+  const fetchRoles = async () => {
+    try {
+      const res = await service.UserRoleDisplay();
+
+      if (!Array.isArray(res)) {
+        toast.error("Invalid role data");
+        return;
+      }
+
+
+      const roleMap: Record<string, Role> = {};
+
+      res.forEach((item: any) => {
+        const roleName = item.ZROLE;
+
+        if (!roleMap[roleName]) {
+          roleMap[roleName] = {
+            id: roleName,
+            roleName: roleName,
+            roleDescription: item.ZROLE_DES,
+            permissions: [],
+          };
+        }
+
+
+        if (!roleMap[roleName].permissions.includes(item.ZACTIVITY)) {
+          roleMap[roleName].permissions.push(item.ZACTIVITY);
+        }
+      });
+
+
+      setRoles(Object.values(roleMap));
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to fetch roles");
+    }
+  };
+
+
 
 
 
@@ -498,15 +691,19 @@ export default function Settings() {
                   ) : (
                     filteredUsers.map((user) => (
                       <TableRow key={user.id} className="hover:bg-muted/30">
-                        <TableCell className="font-medium">{user.plant}</TableCell>
+
+                        <TableCell className="font-medium">{user.plant.join(', ')}</TableCell>
+
                         <TableCell className="font-mono text-sm">{user.userId}</TableCell>
                         <TableCell>{user.fullName}</TableCell>
                         <TableCell className="text-muted-foreground">{user.emailId}</TableCell>
                         <TableCell>{user.contactNumber}</TableCell>
                         <TableCell>
-                          <Badge variant="secondary" className="bg-primary/10 text-primary border-0">
-                            {user.role}
-                          </Badge>
+                          {user.role.map((r, idx) => (
+                            <Badge key={idx} variant="secondary" className="bg-primary/10 text-primary border-0 mr-1">
+                              {r}
+                            </Badge>
+                          ))}
                         </TableCell>
                         <TableCell className="text-center">
                           <Switch
@@ -624,14 +821,68 @@ export default function Settings() {
 
             <div className="space-y-5 py-4">
 
-              <SelectField
-                label="Plant"
-                value={userForm.plant}
-                onChange={(value) => setUserForm({ ...userForm, plant: value })}
-                options={plantOptions}
-                placeholder="Select plant"
-                required
-              />
+              <div className="relative w-full">
+                <Label>Plant *</Label>
+
+                {/* Dropdown box */}
+                <div
+                  className="border border-border rounded-lg p-2 cursor-pointer flex justify-between items-center"
+                  onClick={() => setDropdownOpen(prev => !prev)}
+                >
+                  <span>
+                    {userForm.plant.length > 0
+                      ? plantOptions
+                        .filter(p => userForm.plant.includes(p.value))
+                        .map(p => p.label)
+                        .join(", ")
+                      : "-- Select Plants --"}
+                  </span>
+                  <svg
+                    className={`w-4 h-4 transform transition-transform ${dropdownOpen ? "rotate-180" : ""}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+
+                {/* Checkbox list dropdown */}
+                {dropdownOpen && (
+                  <div className="absolute z-10 mt-1 w-full max-h-48 overflow-y-auto border border-border rounded-lg bg-white shadow-lg">
+                    {plantOptions.map((plant) => (
+                      <label
+                        key={plant.value}
+                        className="flex items-center space-x-2 p-2 cursor-pointer hover:bg-gray-100"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={userForm.plant.includes(plant.value)}
+                          onChange={(e) => {
+                            const newPlants = e.target.checked
+                              ? [...userForm.plant, plant.value]
+                              : userForm.plant.filter(p => p !== plant.value);
+
+                            setUserForm(prev => ({
+                              ...prev,
+                              plant: newPlants,
+                              role: [],
+                            }));
+                            fetchRolesByPlants(newPlants);
+                          }}
+                          className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                        />
+                        <span className="text-sm">{plant.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+
+                {userForm.plant.length === 0 && (
+                  <p className="text-xs text-muted-foreground mt-1">Please select at least one plant</p>
+                )}
+              </div>
+
               <TextField
                 label="User ID"
                 value={userForm.userId}
@@ -661,14 +912,46 @@ export default function Settings() {
                 placeholder="Enter contact number"
                 required
               />
-              <SelectField
-                label="Role"
-                value={userForm.role}
-                onChange={(value) => setUserForm({ ...userForm, role: value })}
-                options={roles.map(r => ({ value: r.roleName, label: r.roleName }))}
-                placeholder="Select role"
-                required
-              />
+              {/* Role Multi-Select with Checkboxes */}
+              <div className="space-y-2">
+                <Label>Role *</Label>
+                <div className="border border-border rounded-lg p-3 max-h-48 overflow-y-auto space-y-2">
+                  {userForm.plant.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Please select plant(s) first</p>
+                  ) : plantRoles.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No roles available for selected plant(s)</p>
+                  ) : (
+                    plantRoles.map((role) => (
+                      <div key={role.id} className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id={`role-${role.id}`}
+                          checked={userForm.role.includes(role.roleName)}
+                          onChange={(e) => {
+                            const newRoles = e.target.checked
+                              ? [...userForm.role, role.roleName]
+                              : userForm.role.filter(r => r !== role.roleName);
+
+                            setUserForm(prev => ({ ...prev, role: newRoles }));
+                          }}
+                          className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary cursor-pointer"
+                        />
+                        <label
+                          htmlFor={`role-${role.id}`}
+                          className="text-sm cursor-pointer flex-1"
+                        >
+                          {role.roleName}
+                        </label>
+                      </div>
+                    ))
+                  )}
+                </div>
+                {userForm.role.length === 0 && userForm.plant.length > 0 && (
+                  <p className="text-xs text-muted-foreground">Please select at least one role</p>
+                )}
+              </div>
+
+
               <TextField
                 label="Password"
                 type="password"
@@ -698,12 +981,33 @@ export default function Settings() {
             </div>
           </ScrollArea>
           <DialogFooter className="border-t pt-4">
-            <Button variant="outline" onClick={() => setIsUserDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSaveUser} className="gap-2 bg-primary hover:bg-primary/90">
-              <Save className="w-4 h-4" />
-              Save
+            <Button variant="outline" onClick={() => setIsUserDialogOpen(false)}>
+              Cancel
             </Button>
+
+            {/* ADD USER */}
+            {!editingUser && (
+              <Button
+                onClick={handleSaveUser}
+                className="gap-2 bg-primary hover:bg-primary/90"
+              >
+                <Save className="w-4 h-4" />
+                Save
+              </Button>
+            )}
+
+            {/* EDIT USER */}
+            {editingUser && (
+              <Button
+                onClick={handleUpdateUser}
+                className="gap-2 bg-primary hover:bg-primary/90"
+              >
+                <Save className="w-4 h-4" />
+                Update
+              </Button>
+            )}
           </DialogFooter>
+
         </DialogContent>
       </Dialog>
 
@@ -713,8 +1017,8 @@ export default function Settings() {
           <DialogHeader>
             <DialogTitle>{editingRole ? 'Edit Role' : 'Add New Role'}</DialogTitle>
           </DialogHeader>
-          <ScrollArea className="max-h-[60vh] pr-4">
-            <div className="space-y-6 py-4">
+          <ScrollArea className="max-h-[60vh] pr-4 overflow-y-auto">
+            <div className="space-y-5 py-4">
               <TextField
                 label="Role Name"
                 value={roleForm.roleName}
@@ -792,12 +1096,36 @@ export default function Settings() {
             </div>
           </ScrollArea>
           <DialogFooter className="border-t pt-4">
-            <Button variant="outline" onClick={() => setIsRoleDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSaveRole} className="gap-2 bg-primary hover:bg-primary/90">
-              <Save className="w-4 h-4" />
-              Save
+            <Button
+              variant="outline"
+              onClick={() => setIsRoleDialogOpen(false)}
+            >
+              Cancel
             </Button>
+
+            {/* SAVE button – CREATE mode */}
+            {!editingRole && (
+              <Button
+                onClick={handleSaveRole}
+                className="gap-2 bg-primary hover:bg-primary/90"
+              >
+                <Save className="w-4 h-4" />
+                Save
+              </Button>
+            )}
+
+            {/* UPDATE button – EDIT mode */}
+            {editingRole && (
+              <Button
+                onClick={handleEditRole}
+                className="gap-2 bg-primary hover:bg-primary/90"
+              >
+                <Save className="w-4 h-4" />
+                Update
+              </Button>
+            )}
           </DialogFooter>
+
         </DialogContent>
       </Dialog>
 
@@ -810,7 +1138,7 @@ export default function Settings() {
               Screen Permissions - {selectedRoleForPermissions?.roleName}
             </DialogTitle>
           </DialogHeader>
-          <ScrollArea className="max-h-[60vh] pr-4">
+          <ScrollArea className="max-h-[60vh] pr-4 overflow-y-auto">
             <div className="py-4">
               <div className="flex items-center justify-between mb-4">
                 <p className="text-sm text-muted-foreground">

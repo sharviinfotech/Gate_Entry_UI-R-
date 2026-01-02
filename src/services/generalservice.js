@@ -133,6 +133,36 @@ const backendNodejs = {
         });
         return res.json();
     },
+    UserRoleEdit: async (data) => {
+        const res = await fetch(`${BASE_URL}api/external/Gate_Entry/UserRoleEdit`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+        });
+        return res.json();
+    },
+    UserRoleDisplay: async () => {
+        const res = await fetch(`${BASE_URL}api/external/Gate_Entry/UserRoleDisplay`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+        });
+        return res.json();
+    },
+    UserPlant: async () => {
+        const res = await fetch(`${BASE_URL}api/external/Gate_Entry/UserPlant`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+        });
+        return res.json();
+    },
+    UserRole: async (data) => {
+        const res = await fetch(`${BASE_URL}api/external/Gate_Entry/UserRole`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+        });
+        return res.json();
+    },
 
 };
 
