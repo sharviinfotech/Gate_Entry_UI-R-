@@ -35,6 +35,7 @@ interface User {
 
 interface Role {
   id: string;
+  werks: string;
   roleName: string;
   roleDescription: string;
   permissions: string[];
@@ -128,7 +129,7 @@ export default function Settings() {
 
       const options = res.map((item: any) => ({
         value: item.WERKS,
-        label: `${item.WERKS} - ${item.NAME1}`,
+        label: item.WERKS,
       }));
 
       console.log("plantOptions mapped:", options);
@@ -147,43 +148,35 @@ export default function Settings() {
     }
 
     try {
-      // ✅ Build payload exactly as API expects
-      const payload = plants.map(plant => ({
-        PLANT: plant
-      }));
-
+      const payload = plants.map(p => ({ PLANT: p }));
       console.log("Roles payload:", payload);
 
       const res = await service.UserRole(payload);
+      console.log("Roles response:", res);
 
-      if (!Array.isArray(res)) {
+      if (!Array.isArray(res) || !res[0]?.ROLES) {
         console.error("Invalid roles response", res);
+        setPlantRoles([]);
         return;
       }
 
-      // ✅ Flatten roles across all plants
-      const allRoles: Role[] = res.flatMap((item: any) =>
-        Array.isArray(item.ROLES)
-          ? item.ROLES.map((r: any) => ({
-            id: `${r.ROLE}-${r.WERKS}`,
-            roleName: r.ROLE,
-            werks: r.WERKS,
-            roleDescription: "",
-            permissions: [],
-          }))
-          : []
-      );
+      const rolesArray = res[0].ROLES;
 
-      // ✅ Remove duplicates (ROLE + WERKS)
-      const uniqueRoles = Array.from(
-        new Map(allRoles.map(r => [r.id, r])).values()
-      );
+      const mappedRoles: Role[] = rolesArray.map((r: any) => ({
+        id: `${r.WERKS}-${r.ROLE}`,      // ✅ unique
+        werks: r.WERKS,
+        roleName: r.ROLE,
+        roleDescription: "",
+        permissions: [],
+      }));
 
-      setPlantRoles(uniqueRoles);
-    } catch (err) {
-      console.error("fetchRolesByPlants error:", err);
+      setPlantRoles(mappedRoles);
+    } catch (error) {
+      console.error("fetchRolesByPlants error:", error);
+      setPlantRoles([]);
     }
   };
+
 
 
 
@@ -227,9 +220,10 @@ export default function Settings() {
         FIRST_NAME: firstName,
         LAST_NAME: lastName,
         PLANTS: userForm.plant.map(p => ({ WERKS: p })),
-        ROLES: userForm.plant.flatMap(p =>
-          userForm.role.map(r => ({ WERKS: p, ROLE: r }))
-        ),
+        ROLES: userForm.role.map(r => {
+          const [werks, roleName] = r.split("-");
+          return { WERKS: werks, ROLE: roleName };
+        }),
         EMAIL: userForm.emailId,
         CONTACT: userForm.contactNumber,
         PASSWORD: userForm.password,
@@ -242,12 +236,14 @@ export default function Settings() {
 
     try {
       const res = await service.AddUser(payload);
-      if (res.STATUS === "SUCCESS") {
-        Swal.fire(
-          "Success",
-          "User created successfully",
-          "success"
-        );
+      if (res.STATUS === "SUCCESS" || res.STATUS === "TRUE") {
+        Swal.fire({
+          icon: "success",
+          title: "Success",
+          text: "User created successfully",
+          confirmButtonText: "OK",
+        });
+
         setIsUserDialogOpen(false);
         fetchUsers();
       } else {
@@ -258,17 +254,14 @@ export default function Settings() {
     }
   };
 
-
-
-
   const handleUpdateUser = async () => {
     if (
-      !userForm.plant ||
+      !userForm.plant.length ||
       !userForm.userId ||
       !userForm.fullName ||
       !userForm.emailId ||
       !userForm.contactNumber ||
-      !userForm.role ||
+      !userForm.role.length ||
       !userForm.status
     ) {
       toast.error("Please fill in all required fields");
@@ -284,13 +277,12 @@ export default function Settings() {
         FIRST_NAME: firstName,
         LAST_NAME: lastName,
 
-        // map selected plants
         PLANTS: userForm.plant.map(p => ({ WERKS: p })),
 
-        // map roles for each selected plant
-        ROLES: userForm.role.flatMap(roleName =>
-          userForm.plant.map(plant => ({ WERKS: plant, ROLE: roleName }))
-        ),
+        ROLES: userForm.role.map(r => {
+          const [werks, roleName] = r.split("-");
+          return { WERKS: werks, ROLE: roleName };
+        }),
 
         EMAIL: userForm.emailId,
         CONTACT: userForm.contactNumber,
@@ -298,12 +290,7 @@ export default function Settings() {
       },
     };
 
-    if (userForm.password?.trim()) {
-      payload.EDIT.PASSWORD = userForm.password;
-    }
 
-
-    // 🔐 password optional
     if (userForm.password?.trim()) {
       payload.EDIT.PASSWORD = userForm.password;
     }
@@ -313,12 +300,8 @@ export default function Settings() {
     try {
       const res = await service.UserEdit(payload);
 
-      if (res.STATUS === "SUCCESS") {
-        Swal.fire(
-          "Success",
-          "User updated successfully",
-          "success"
-        );
+      if (res.STATUS === "TRUE" || res.STATUS === "SUCCESS") {
+        Swal.fire("Success", "User updated successfully", "success");
 
         setUsers(prev =>
           prev.map(u =>
@@ -336,7 +319,6 @@ export default function Settings() {
           )
         );
 
-
         setIsUserDialogOpen(false);
         setEditingUser(null);
       } else {
@@ -350,11 +332,9 @@ export default function Settings() {
 
 
 
-
-
-
-  const openEditUserDialog = (user: User) => {
+  const openEditUserDialog = async (user: User) => {
     setEditingUser(user);
+
     setUserForm({
       plant: [...user.plant],
       userId: user.userId,
@@ -365,8 +345,13 @@ export default function Settings() {
       password: user.password,
       status: user.status,
     });
+
+
+    await fetchRolesByPlants(user.plant);
+
     setIsUserDialogOpen(true);
   };
+
 
 
 
@@ -374,43 +359,53 @@ export default function Settings() {
     try {
       const res = await service.DisplayTable();
 
-      if (Array.isArray(res)) {
-        const userMap: Record<string, User> = {};
-
-        res.forEach((item) => {
-          if (!userMap[item.ZUSER]) {
-            userMap[item.ZUSER] = {
-              id: item.ZUSER,
-              userId: item.ZUSER,
-              fullName: `${item.ZFIRST_NAME} ${item.ZLAST_NAME}`,
-              emailId: item.ZEMAIL,
-              contactNumber: item.ZCONTACT,
-              plant: [],
-              role: [],
-              status: item.ZSTATUS === "Inactive" ? "Inactive" : "Active",
-            };
-          }
-
-          // Add plant if not already present
-          if (item.ZWERKS && !userMap[item.ZUSER].plant.includes(item.ZWERKS)) {
-            userMap[item.ZUSER].plant.push(item.ZWERKS);
-          }
-
-          // Add role if not empty and not already present
-          if (item.ZROLE && !userMap[item.ZUSER].role.includes(item.ZROLE)) {
-            userMap[item.ZUSER].role.push(item.ZROLE);
-          }
-        });
-
-        setUsers(Object.values(userMap));
-      } else {
+      if (!Array.isArray(res)) {
         toast.error("Invalid user data received");
+        return;
       }
+
+      const userMap: Record<string, User> = {};
+
+      res.forEach((item: any) => {
+        if (!userMap[item.ZUSER]) {
+          userMap[item.ZUSER] = {
+            id: item.ZUSER,
+            userId: item.ZUSER,
+            fullName: `${item.ZFIRST_NAME} ${item.ZLAST_NAME}`,
+            emailId: item.ZEMAIL,
+            contactNumber: item.ZCONTACT,
+            plant: [],
+            role: [],
+            password: item.ZPASSWORD,
+            status: item.ZSTATUS === "Inactive" ? "Inactive" : "Active",
+          };
+        }
+
+        // ✅ PLANT
+        if (
+          item.ZWERKS &&
+          !userMap[item.ZUSER].plant.includes(item.ZWERKS)
+        ) {
+          userMap[item.ZUSER].plant.push(item.ZWERKS);
+        }
+
+        // ✅ ROLE 
+        if (item.ZWERKS && item.ZROLE) {
+          const roleValue = `${item.ZWERKS}-${item.ZROLE}`;
+
+          if (!userMap[item.ZUSER].role.includes(roleValue)) {
+            userMap[item.ZUSER].role.push(roleValue);
+          }
+        }
+      });
+
+      setUsers(Object.values(userMap));
     } catch (error) {
       console.error(error);
       toast.error("Failed to fetch users");
     }
   };
+
 
 
 
@@ -485,6 +480,7 @@ export default function Settings() {
           ...prev,
           {
             id: Date.now().toString(),
+            werks: "ALL",
             roleName: roleForm.roleName,
             roleDescription: roleForm.roleDescription,
             permissions: roleForm.permissions
@@ -554,6 +550,7 @@ export default function Settings() {
         if (!roleMap[roleName]) {
           roleMap[roleName] = {
             id: roleName,
+            werks: "ALL",
             roleName: roleName,
             roleDescription: item.ZROLE_DES,
             permissions: [],
@@ -822,7 +819,9 @@ export default function Settings() {
             <div className="space-y-5 py-4">
 
               <div className="relative w-full">
-                <Label>Plant *</Label>
+                <Label>
+                  Plant <span className="text-red-500">*</span>
+                </Label>
 
                 {/* Dropdown box */}
                 <div
@@ -914,42 +913,58 @@ export default function Settings() {
               />
               {/* Role Multi-Select with Checkboxes */}
               <div className="space-y-2">
-                <Label>Role *</Label>
+                <Label>
+                  Role <span className="text-red-500">*</span>
+                </Label>
+
                 <div className="border border-border rounded-lg p-3 max-h-48 overflow-y-auto space-y-2">
                   {userForm.plant.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Please select plant(s) first</p>
+                    <p className="text-sm text-muted-foreground">
+                      Please select plant(s) first
+                    </p>
                   ) : plantRoles.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No roles available for selected plant(s)</p>
+                    <p className="text-sm text-muted-foreground">
+                      No roles available for selected plant(s)
+                    </p>
                   ) : (
-                    plantRoles.map((role) => (
-                      <div key={role.id} className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          id={`role-${role.id}`}
-                          checked={userForm.role.includes(role.roleName)}
-                          onChange={(e) => {
-                            const newRoles = e.target.checked
-                              ? [...userForm.role, role.roleName]
-                              : userForm.role.filter(r => r !== role.roleName);
+                    plantRoles.map((role) => {
+                      const roleValue = `${role.werks}-${role.roleName}`; // ✅ UNIQUE
+                      const roleLabel = `${role.werks} - ${role.roleName}`;
 
-                            setUserForm(prev => ({ ...prev, role: newRoles }));
-                          }}
-                          className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary cursor-pointer"
-                        />
-                        <label
-                          htmlFor={`role-${role.id}`}
-                          className="text-sm cursor-pointer flex-1"
-                        >
-                          {role.roleName}
-                        </label>
-                      </div>
-                    ))
+                      return (
+                        <div key={role.id} className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id={`role-${role.id}`}
+                            checked={userForm.role.includes(roleValue)}
+                            onChange={(e) => {
+                              const newRoles = e.target.checked
+                                ? [...userForm.role, roleValue]
+                                : userForm.role.filter(r => r !== roleValue);
+
+                              setUserForm(prev => ({ ...prev, role: newRoles }));
+                            }}
+                            className="w-4 h-4 text-primary border-gray-300 rounded cursor-pointer"
+                          />
+                          <label
+                            htmlFor={`role-${role.id}`}
+                            className="text-sm cursor-pointer"
+                          >
+                            {roleLabel}
+                          </label>
+                        </div>
+                      );
+                    })
                   )}
                 </div>
+
                 {userForm.role.length === 0 && userForm.plant.length > 0 && (
-                  <p className="text-xs text-muted-foreground">Please select at least one role</p>
+                  <p className="text-xs text-muted-foreground">
+                    Please select at least one role
+                  </p>
                 )}
               </div>
+
 
 
               <TextField
