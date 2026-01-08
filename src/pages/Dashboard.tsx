@@ -161,7 +161,7 @@ export default function Dashboard() {
   const currentHour = new Date().getHours();
   const greeting = currentHour < 12 ? 'Good Morning' : currentHour < 17 ? 'Good Afternoon' : 'Good Evening';
   const userName = 'WebUser';
-  
+
   const [themeIndex, setThemeIndex] = useState(0);
   const [hoveredModule, setHoveredModule] = useState<string | null>(null);
   const currentTheme = welcomeThemes[themeIndex];
@@ -176,7 +176,7 @@ export default function Dashboard() {
     if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
       return;
     }
-    
+
     const key = event.key;
     const module = modules.find(m => m.shortcut === key);
     if (module) {
@@ -233,7 +233,7 @@ export default function Dashboard() {
             <div className="h-12 w-12 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center">
               <Package className="w-6 h-6 text-white/80" />
             </div>
-            <button 
+            <button
               onClick={cycleTheme}
               className="text-xs text-white/50 hover:text-white transition-colors flex items-center gap-1"
               title="Change theme color"
@@ -249,9 +249,9 @@ export default function Dashboard() {
       {/* Stats Grid - Clickable */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" style={{ animationDelay: '0.1s' }}>
         {stats.map((stat, index) => (
-          <div 
-            key={stat.title} 
-            className="animate-slide-up cursor-pointer transform hover:scale-[1.02] transition-all duration-200" 
+          <div
+            key={stat.title}
+            className="animate-slide-up cursor-pointer transform hover:scale-[1.02] transition-all duration-200"
             style={{ animationDelay: `${0.1 + index * 0.05}s` }}
             onClick={() => navigate(stat.path)}
           >
@@ -273,13 +273,13 @@ export default function Dashboard() {
           <CollapsibleContent className="px-4 pb-4">
             <div className="grid grid-cols-4 gap-3 pt-2">
               {modules.map((module, index) => (
-                <div 
-                  key={module.title} 
-                  className="relative group" 
+                <div
+                  key={module.title}
+                  className="relative group"
                   onMouseEnter={() => setHoveredModule(module.title)}
                   onMouseLeave={() => setHoveredModule(null)}
                 >
-                  <div 
+                  <div
                     className={`absolute -top-2 -right-2 z-10 w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center shadow-md transition-all duration-200 ${hoveredModule === module.title ? 'scale-110 ring-2 ring-primary/50' : ''}`}
                   >
                     {module.shortcut}
@@ -295,7 +295,7 @@ export default function Dashboard() {
       {/* Purchase & Plant Analytics Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Plant-wise Summary */}
-        <div className="enterprise-card p-6 animate-slide-up" style={{ animationDelay: '0.15s' }}>
+        {/* <div className="enterprise-card p-6 animate-slide-up" style={{ animationDelay: '0.15s' }}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Building2 className="w-5 h-5 text-accent" />
@@ -336,10 +336,10 @@ export default function Dashboard() {
               </div>
             ))}
           </div>
-        </div>
+        </div> */}
 
         {/* Purchase Order Status */}
-        <div className="enterprise-card p-6 animate-slide-up" style={{ animationDelay: '0.2s' }}>
+        {/* <div className="enterprise-card p-6 animate-slide-up" style={{ animationDelay: '0.2s' }}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <ShoppingCart className="w-5 h-5 text-accent" />
@@ -371,13 +371,13 @@ export default function Dashboard() {
               />
             </PieChart>
           </ResponsiveContainer>
-        </div>
+        </div> */}
       </div>
 
       {/* Weekly Trend & KPIs */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Weekly Trend Chart */}
-        <div className="lg:col-span-2 enterprise-card p-6 animate-slide-up" style={{ animationDelay: '0.25s' }}>
+        {/* <div className="lg:col-span-2 enterprise-card p-6 animate-slide-up" style={{ animationDelay: '0.25s' }}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <TrendingUp className="w-5 h-5 text-accent" />
@@ -400,28 +400,28 @@ export default function Dashboard() {
               <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" fontSize={12} />
               <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
               <Tooltip content={<CustomTooltip />} />
-              <Line 
-                type="monotone" 
-                dataKey="inward" 
-                stroke={CHART_COLORS.accent} 
+              <Line
+                type="monotone"
+                dataKey="inward"
+                stroke={CHART_COLORS.accent}
                 strokeWidth={2}
                 dot={{ fill: CHART_COLORS.accent, strokeWidth: 2 }}
                 name="Inward"
               />
-              <Line 
-                type="monotone" 
-                dataKey="outward" 
-                stroke={CHART_COLORS.info} 
+              <Line
+                type="monotone"
+                dataKey="outward"
+                stroke={CHART_COLORS.info}
                 strokeWidth={2}
                 dot={{ fill: CHART_COLORS.info, strokeWidth: 2 }}
                 name="Outward"
               />
             </LineChart>
           </ResponsiveContainer>
-        </div>
+        </div> */}
 
         {/* Quick KPIs for Purchase */}
-        <div className="enterprise-card p-6 animate-slide-up" style={{ animationDelay: '0.3s' }}>
+        {/* <div className="enterprise-card p-6 animate-slide-up" style={{ animationDelay: '0.3s' }}>
           <div className="flex items-center gap-2 mb-4">
             <FileText className="w-5 h-5 text-accent" />
             <h3 className="font-semibold text-foreground">Purchase KPIs</h3>
@@ -456,10 +456,10 @@ export default function Dashboard() {
               <span className="font-bold text-success">{summaryKpis.complianceRate}%</span>
             </div>
           </div>
-        </div>
+        </div> */}
 
         {/* Top Vendors */}
-        <div className="enterprise-card p-6 animate-slide-up" style={{ animationDelay: '0.35s' }}>
+        {/* <div className="enterprise-card p-6 animate-slide-up" style={{ animationDelay: '0.35s' }}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Users className="w-5 h-5 text-accent" />
@@ -485,11 +485,11 @@ export default function Dashboard() {
               </div>
             ))}
           </div>
-        </div>
+        </div> */}
       </div>
 
       {/* Top 5 Users Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="enterprise-card p-6 animate-slide-up" style={{ animationDelay: '0.4s' }}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
@@ -518,7 +518,7 @@ export default function Dashboard() {
             ))}
           </div>
         </div>
-      </div>
+      </div> */}
 
       {/* Recent Entries */}
       <div className="animate-slide-up" style={{ animationDelay: '0.5s' }}>

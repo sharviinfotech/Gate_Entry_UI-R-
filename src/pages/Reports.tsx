@@ -50,13 +50,13 @@ const getRefDocTypeName = (code: string) => REF_DOC_TYPE_NAMES[code] || code;
 
 // Quick date presets
 const DATE_PRESETS = [
-  { label: 'Today', getValue: () => ({ from: format(new Date(), 'yyyy-MM-dd'), to: format(new Date(), 'yyyy-MM-dd') }) },
-  { label: 'Yesterday', getValue: () => ({ from: format(subDays(new Date(), 1), 'yyyy-MM-dd'), to: format(subDays(new Date(), 1), 'yyyy-MM-dd') }) },
-  { label: 'This Week', getValue: () => ({ from: format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd'), to: format(endOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd') }) },
-  { label: 'Last 7 Days', getValue: () => ({ from: format(subDays(new Date(), 6), 'yyyy-MM-dd'), to: format(new Date(), 'yyyy-MM-dd') }) },
-  { label: 'Last 30 Days', getValue: () => ({ from: format(subDays(new Date(), 29), 'yyyy-MM-dd'), to: format(new Date(), 'yyyy-MM-dd') }) },
-  { label: 'This Month', getValue: () => ({ from: format(startOfMonth(new Date()), 'yyyy-MM-dd'), to: format(new Date(), 'yyyy-MM-dd') }) },
-  { label: 'This Year', getValue: () => ({ from: format(startOfYear(new Date()), 'yyyy-MM-dd'), to: format(new Date(), 'yyyy-MM-dd') }) },
+  // { label: 'Today', getValue: () => ({ from: format(new Date(), 'yyyy-MM-dd'), to: format(new Date(), 'yyyy-MM-dd') }) },
+  // { label: 'Yesterday', getValue: () => ({ from: format(subDays(new Date(), 1), 'yyyy-MM-dd'), to: format(subDays(new Date(), 1), 'yyyy-MM-dd') }) },
+  // { label: 'This Week', getValue: () => ({ from: format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd'), to: format(endOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd') }) },
+  // { label: 'Last 7 Days', getValue: () => ({ from: format(subDays(new Date(), 6), 'yyyy-MM-dd'), to: format(new Date(), 'yyyy-MM-dd') }) },
+  // { label: 'Last 30 Days', getValue: () => ({ from: format(subDays(new Date(), 29), 'yyyy-MM-dd'), to: format(new Date(), 'yyyy-MM-dd') }) },
+  // { label: 'This Month', getValue: () => ({ from: format(startOfMonth(new Date()), 'yyyy-MM-dd'), to: format(new Date(), 'yyyy-MM-dd') }) },
+  // { label: 'This Year', getValue: () => ({ from: format(startOfYear(new Date()), 'yyyy-MM-dd'), to: format(new Date(), 'yyyy-MM-dd') }) },
 ];
 
 // Transform API data to component format
@@ -163,6 +163,8 @@ export default function Reports() {
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const itemsPerPage = 10;
+
+
 
   // Apply date preset
   const applyDatePreset = (preset: typeof DATE_PRESETS[0]) => {
@@ -356,6 +358,7 @@ export default function Reports() {
 
         setResults(transformedData);
         setCurrentPage(1);
+        setActiveView('table');
         toast.success(`Found ${transformedData.length} entries`);
       } else {
         setResults([]);
@@ -489,7 +492,7 @@ export default function Reports() {
                 </div>
 
                 {/* Entry Date Range with Quick Presets */}
-                <div className="space-y-2">
+                {/* <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label className="text-sm font-medium">Entry Date</Label>
                     <div className="flex items-center gap-1">
@@ -523,6 +526,29 @@ export default function Reports() {
                       type="date"
                       value={filters.entryDateTo}
                       onChange={(e) => setFilters({ ...filters, entryDateTo: e.target.value })}
+                      className="h-9"
+                    />
+                  </div>
+                </div> */}
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Entry Date</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="date"
+                      value={filters.entryDateFrom}
+                      onChange={(e) =>
+                        setFilters({ ...filters, entryDateFrom: e.target.value })
+                      }
+                      className="h-9"
+                    />
+                    <span className="text-muted-foreground text-sm">→</span>
+                    <Input
+                      type="date"
+                      value={filters.entryDateTo}
+                      onChange={(e) =>
+                        setFilters({ ...filters, entryDateTo: e.target.value })
+                      }
                       className="h-9"
                     />
                   </div>
@@ -606,7 +632,7 @@ export default function Reports() {
                 </div>
 
                 {/* Entered By */}
-                <div className="space-y-2">
+                {/* <div className="space-y-2">
                   <Label className="text-sm font-medium">Entered By</Label>
                   <Input
                     placeholder="Enter User Name"
@@ -614,10 +640,10 @@ export default function Reports() {
                     onChange={(e) => setFilters({ ...filters, enteredBy: e.target.value })}
                     className="h-9"
                   />
-                </div>
+                </div> */}
 
                 {/* Smart Search */}
-                <div className="space-y-2 md:col-span-2">
+                {/* <div className="space-y-2 md:col-span-2">
                   <Label className="text-sm font-medium">Smart Search</Label>
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -628,7 +654,7 @@ export default function Reports() {
                       className="h-9 pl-9"
                     />
                   </div>
-                </div>
+                </div> */}
               </div>
 
               {/* Process Type Radio */}
@@ -673,10 +699,10 @@ export default function Reports() {
                   <RefreshCw className="w-4 h-4" />
                   Reset
                 </Button>
-                <Button variant="outline" onClick={handleExport} className="gap-2 ml-auto" disabled={results.length === 0}>
+                {/* <Button variant="outline" onClick={handleExport} className="gap-2 ml-auto" disabled={results.length === 0}>
                   <Download className="w-4 h-4" />
                   Export Excel
-                </Button>
+                </Button> */}
               </div>
             </div>
           </CollapsibleContent>
@@ -684,7 +710,7 @@ export default function Reports() {
       </Collapsible>
 
       {/* KPI Summary Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
+      {/* <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
         {[
           { label: 'Total', value: kpis.totalEntries, icon: FileSpreadsheet, color: 'bg-primary/10 text-primary' },
           { label: 'Inward', value: kpis.inwardEntries, icon: Package, color: 'bg-accent/10 text-accent' },
@@ -704,7 +730,7 @@ export default function Reports() {
             </div>
           </div>
         ))}
-      </div>
+      </div> */}
 
       {/* View Toggle & Content */}
       <Tabs
@@ -720,7 +746,7 @@ export default function Reports() {
         className="space-y-4"
       >
 
-        <div className="flex items-center justify-between">
+        {/* <div className="flex items-center justify-between">
           <TabsList className="grid grid-cols-2 w-fit">
             <TabsTrigger value="charts" className="gap-2">
               <BarChart3 className="w-4 h-4" />
@@ -732,7 +758,7 @@ export default function Reports() {
             </TabsTrigger>
           </TabsList>
           <p className="text-sm text-muted-foreground">{results.length} entries found</p>
-        </div>
+        </div> */}
 
         <TabsContent value="charts" className="space-y-6">
           {isLoading ? (
@@ -755,7 +781,7 @@ export default function Reports() {
               {/* Charts Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Inward vs Outward Pie Chart */}
-                <div className="enterprise-card p-6">
+                {/* <div className="enterprise-card p-6">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
                       <PieChartIcon className="w-5 h-5 text-accent" />
@@ -792,10 +818,10 @@ export default function Reports() {
                       />
                     </PieChart>
                   </ResponsiveContainer>
-                </div>
+                </div> */}
 
                 {/* Status Pie Chart */}
-                <div className="enterprise-card p-6">
+                {/* <div className="enterprise-card p-6">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
                       <PieChartIcon className="w-5 h-5 text-accent" />
@@ -832,10 +858,10 @@ export default function Reports() {
                       />
                     </PieChart>
                   </ResponsiveContainer>
-                </div>
+                </div> */}
 
                 {/* Plant-wise Bar Chart */}
-                <div className="enterprise-card p-6">
+                {/* <div className="enterprise-card p-6">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
                       <BarChart3 className="w-5 h-5 text-accent" />
@@ -864,10 +890,10 @@ export default function Reports() {
                       <Bar dataKey="Outward" fill={CHART_COLORS.info} radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
-                </div>
+                </div> */}
 
                 {/* Reference Document Type Bar Chart */}
-                <div className="enterprise-card p-6">
+                {/* <div className="enterprise-card p-6">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
                       <BarChart3 className="w-5 h-5 text-accent" />
@@ -894,11 +920,11 @@ export default function Reports() {
                       <Bar dataKey="count" fill={CHART_COLORS.primary} radius={[0, 4, 4, 0]} name="Count" />
                     </BarChart>
                   </ResponsiveContainer>
-                </div>
+                </div> */}
               </div>
 
               {/* Top Vendors Chart - Full Width */}
-              <div className="enterprise-card p-6">
+              {/* <div className="enterprise-card p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
                     <PieChartIcon className="w-5 h-5 text-accent" />
@@ -929,7 +955,7 @@ export default function Reports() {
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
-              </div>
+              </div> */}
             </>
           )}
         </TabsContent>
@@ -956,12 +982,12 @@ export default function Reports() {
             <div className="enterprise-card overflow-hidden">
               {/* Table Header with Export */}
               <div className="flex items-center justify-between p-4 border-b border-border">
-                <div className="flex items-center gap-2">
+                {/* <div className="flex items-center gap-2">
                   <FileSpreadsheet className="w-5 h-5 text-accent" />
                   <h3 className="font-semibold text-foreground">Data Table</h3>
                   <span className="text-sm text-muted-foreground">({results.length} records)</span>
-                </div>
-                <Button variant="outline" size="sm" onClick={handleExport} className="gap-2">
+                </div> */}
+                <Button variant="outline" size="sm" onClick={handleExport} className="gap-2 ml-auto">
                   <Download className="w-4 h-4" />
                   Export to Excel
                 </Button>

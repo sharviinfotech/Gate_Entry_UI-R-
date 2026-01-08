@@ -66,6 +66,17 @@ export default function Settings() {
   const [activeTab, setActiveTab] = useState('users');
   const [userSearchQuery, setUserSearchQuery] = useState('');
 
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [viewType, setViewType] = useState<'PLANT' | 'ROLE' | null>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+
+  const openViewDialog = (user: User, type: 'PLANT' | 'ROLE') => {
+    setSelectedUser(user);
+    setViewType(type);
+    setIsViewDialogOpen(true);
+  };
+
+
   const [plantOptions, setPlantOptions] = useState<
     { value: string; label: string }[]
   >([]);
@@ -120,7 +131,7 @@ export default function Settings() {
     try {
       const res = await service.UserPlant();
 
-      console.log("fetchPlants API response:", res);
+      console.log("fetchPlants:", res);
 
       if (!Array.isArray(res)) {
         toast.error("Invalid plant data");
@@ -240,7 +251,7 @@ export default function Settings() {
         Swal.fire({
           icon: "success",
           title: "Success",
-          text: "User created successfully",
+          text: "User Created Successfully",
           confirmButtonText: "OK",
         });
 
@@ -278,11 +289,17 @@ export default function Settings() {
         LAST_NAME: lastName,
 
         PLANTS: userForm.plant.map(p => ({ WERKS: p })),
-
         ROLES: userForm.role.map(r => {
           const [werks, roleName] = r.split("-");
           return { WERKS: werks, ROLE: roleName };
         }),
+
+        // ROLES: userForm.plant.flatMap(p =>
+        //   userForm.role.map(r => {
+        //     const roleName = r.includes("-") ? r.split("-")[1] : r;
+        //     return { WERKS: p, ROLE: roleName };
+        //   })
+        // ),
 
         EMAIL: userForm.emailId,
         CONTACT: userForm.contactNumber,
@@ -301,23 +318,18 @@ export default function Settings() {
       const res = await service.UserEdit(payload);
 
       if (res.STATUS === "TRUE" || res.STATUS === "SUCCESS") {
-        Swal.fire("Success", "User updated successfully", "success");
+        Swal.fire("Success", "User Updated Successfully", "success");
 
-        setUsers(prev =>
-          prev.map(u =>
-            u.id === editingUser?.id
-              ? {
-                ...u,
-                plant: [...userForm.plant],
-                fullName: userForm.fullName,
-                emailId: userForm.emailId,
-                contactNumber: userForm.contactNumber,
-                role: [...userForm.role],
-                status: userForm.status,
-              }
-              : u
-          )
-        );
+        if (res.STATUS === "TRUE" || res.STATUS === "SUCCESS") {
+          Swal.fire("Success", "User Updated Successfully", "success");
+
+          setIsUserDialogOpen(false);
+          setEditingUser(null);
+
+
+          await fetchUsers();
+        }
+
 
         setIsUserDialogOpen(false);
         setEditingUser(null);
@@ -358,6 +370,7 @@ export default function Settings() {
   const fetchUsers = async () => {
     try {
       const res = await service.DisplayTable();
+      console.log("DisplayTable API response:", res);
 
       if (!Array.isArray(res)) {
         toast.error("Invalid user data received");
@@ -468,6 +481,8 @@ export default function Settings() {
 
     try {
       const res = await service.UserRoleCreation(payload);
+      console.log("UserRoleCreation API response:", res);
+
       if (res.STATUS === "SUCCESS") {
         Swal.fire(
           "Success",
@@ -512,6 +527,7 @@ export default function Settings() {
       const payload = buildEditPayload();
 
       const res = await service.UserRoleEdit(payload);
+      console.log("UserRoleEdit API response:", res);
 
       if (res.STATUS === "SUCCESS") {
         Swal.fire(
@@ -689,19 +705,42 @@ export default function Settings() {
                     filteredUsers.map((user) => (
                       <TableRow key={user.id} className="hover:bg-muted/30">
 
-                        <TableCell className="font-medium">{user.plant.join(', ')}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary">
+                              Plants: {user.plant.length}
+                            </Badge>
+                            <Button
+                              variant="link"
+                              size="sm"
+                              onClick={() => openViewDialog(user, 'PLANT')}
+                            >
+                              View
+                            </Button>
+                          </div>
+                        </TableCell>
+
+
 
                         <TableCell className="font-mono text-sm">{user.userId}</TableCell>
                         <TableCell>{user.fullName}</TableCell>
                         <TableCell className="text-muted-foreground">{user.emailId}</TableCell>
                         <TableCell>{user.contactNumber}</TableCell>
                         <TableCell>
-                          {user.role.map((r, idx) => (
-                            <Badge key={idx} variant="secondary" className="bg-primary/10 text-primary border-0 mr-1">
-                              {r}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge variant="secondary">
+                              Roles: {user.role.length}
                             </Badge>
-                          ))}
+                            <Button
+                              variant="link"
+                              size="sm"
+                              onClick={() => openViewDialog(user, 'ROLE')}
+                            >
+                              View
+                            </Button>
+                          </div>
                         </TableCell>
+
                         <TableCell className="text-center">
                           <Switch
                             checked={user.status === 'Active'}
@@ -1225,6 +1264,73 @@ export default function Settings() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="max-w-md h-[90vh] ml-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {viewType === 'PLANT' ? 'Assigned Plants' : 'Assigned Roles'}
+            </DialogTitle>
+            <p className="text-sm text-muted-foreground">
+              {selectedUser?.fullName} ({selectedUser?.userId})
+            </p>
+          </DialogHeader>
+
+          <ScrollArea className="h-[70vh] pr-4">
+            {/* PLANTS VIEW */}
+            {viewType === 'PLANT' && (
+              <div className="space-y-2">
+                {selectedUser?.plant.map((p) => (
+                  <div
+                    key={p}
+                    className="flex items-center justify-between p-3 border rounded-lg"
+                  >
+                    <span className="font-medium">{p}</span>
+                    <Check className="w-4 h-4 text-primary" />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* ROLES VIEW (GROUPED BY PLANT) */}
+            {viewType === 'ROLE' && (
+              <div className="space-y-4">
+                {Object.entries(
+                  selectedUser?.role.reduce((acc: any, r) => {
+                    const [werks, roleName] = r.split("-");
+                    acc[werks] = acc[werks] || [];
+                    acc[werks].push(roleName);
+                    return acc;
+                  }, {}) || {}
+                ).map(([werks, roles]) => (
+                  <div key={werks} className="border rounded-lg">
+                    <div className="px-3 py-2 bg-muted font-semibold">
+                      Plant {werks}
+                    </div>
+                    <div className="p-3 space-y-2">
+                      {(roles as string[]).map((role) => (
+                        <div
+                          key={role}
+                          className="flex items-center justify-between"
+                        >
+                          <span>{role}</span>
+                          <Badge variant="outline">{werks}-{role}</Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }
