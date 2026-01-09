@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Save, RotateCcw, FileDown, FileSpreadsheet,Loader2 } from 'lucide-react';
+import { Search, Save, RotateCcw, FileDown, FileSpreadsheet, Loader2 } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { FormSection } from '@/components/shared/FormSection';
 import { TextField, SelectField } from '@/components/shared/FormField';
@@ -12,7 +12,7 @@ import { exportToExcel, transporterOptions, generateTestItems, packingConditionO
 import { useAuth } from '@/contexts/AuthContext';
 import service from "../../services/generalservice.js";
 import Swal from "sweetalert2";
-
+import { createPortal } from 'react-dom';
 interface ItemRow {
   "GENO": string,
   "EBELN": number,
@@ -147,11 +147,23 @@ export default function InwardPOReference() {
   };
 
   const handleFetchPO = async () => {
-    if (!headerData.PONO || !headerData.WERKS) {
-      toast.error('Please enter PO Number and Plant');
+    const requiredFields = [];
+    if (!headerData.PONO) requiredFields.push("PO Number");
+    if (!headerData.WERKS) requiredFields.push("Plant");
+
+    // 2. If any fields are missing, show the specific names
+    if (requiredFields.length > 0) {
+      Swal.fire({
+        title: "Missing Required Fields",
+        // This will say "Please enter PO Number" or "Please enter Plant" 
+        // or "Please enter PO Number and Plant"
+        text: `Please enter: ${requiredFields.join(" and ")}.`,
+        icon: "warning",
+        confirmButtonColor: "#f0ad4e",
+      });
       return;
     }
-  
+
 
     const payload = {
       "PO_GET": {
@@ -222,8 +234,8 @@ export default function InwardPOReference() {
         "REUSE": ""
       }
     }
-   console.log('payload',payload)
-   
+    console.log('payload', payload)
+    setIsLoading(true);
     try {
 
       const response = await service.fetchGateEntryChange(payload);
@@ -239,11 +251,11 @@ export default function InwardPOReference() {
         .filter(r => r.MSG_TYPE === "I")
         .map(r => `• ${r.MSG}`);
 
-          const successWarningMessages = response
+      const successWarningMessages = response
         .filter(r => r.MSG_TYPE === "S")
         .map(r => `• ${r.MSG}`);
 
-      
+
 
       // ❌ If errors exist → show all errors
       if (errorMessages.length > 0) {
@@ -253,7 +265,7 @@ export default function InwardPOReference() {
           icon: "error",
           confirmButtonColor: "#d33",
         });
-       setIsLoading(false);
+        setIsLoading(false);
         return
       }
 
@@ -268,7 +280,7 @@ export default function InwardPOReference() {
         setIsLoading(false);
         return
       }
-        if (successWarningMessages.length > 0) {
+      if (successWarningMessages.length > 0) {
         Swal.fire({
           title: "Warning",
           html: successWarningMessages.join("<br>"),
@@ -291,20 +303,25 @@ export default function InwardPOReference() {
         if (response) {
 
 
-        const itemResponse: ItemRow[] = response;
-        console.log("itemResponse", itemResponse)
-        setItems(itemResponse);
+          const itemResponse: ItemRow[] = response;
+          console.log("itemResponse", itemResponse)
+          setItems(itemResponse);
 
-        // Simulate fetching gate entry data
-        setTimeout(() => {
-          setIsLoading(false);
-          toast.success('Data Fetched successfully');
-        }, 1000);
-      }
+          setHeaderData(prev => ({
+            ...prev,
+            VENDOR: itemResponse?.[0]?.CVNO1 || '',
+            VNAME: itemResponse?.[0]?.CVNAME1 || '',
+          }));
+          // Simulate fetching gate entry data
+          setTimeout(() => {
+            setIsLoading(false);
+            toast.success('Data Fetched successfully');
+          }, 1000);
+        }
 
         // ✅ Reset state after success
       }
-      
+
 
     } catch (err) {
       console.error(err);
@@ -313,7 +330,7 @@ export default function InwardPOReference() {
       setIsLoading(false);
     }
 
-    setIsLoading(true);
+
     // Simulate SAP fetch with 35 items
 
   };
@@ -332,15 +349,15 @@ export default function InwardPOReference() {
   const handleSave = async () => {
     const selectedItems = items.filter(item => item.CHK === "X");
 
-  if (selectedItems.length === 0) {
-    Swal.fire({
-      title: "Validation Error",
-      text: "Please select at least one item to save.",
-      icon: "warning",
-      confirmButtonColor: "#f0ad4e",
-    });
-    return;
-  }
+    if (selectedItems.length === 0) {
+      Swal.fire({
+        title: "Validation Error",
+        text: "Please select at least one item to save.",
+        icon: "warning",
+        confirmButtonColor: "#f0ad4e",
+      });
+      return;
+    }
     const payload = {
       CREATE: "X",
       CHANGE: "",
@@ -350,11 +367,9 @@ export default function InwardPOReference() {
       HEADER: [headerData],
       ITEM: items,
     };
- console.log("payload",payload)
- 
+    console.log("payload", payload)
+    setIsLoading(true);
     try {
-      setIsLoading(true); // ✅ Spinner ON
-
       const response = await service.GateEntryCreation(payload);
       console.log("response", response);
 
@@ -436,7 +451,7 @@ export default function InwardPOReference() {
       VENDOR: '',
       VNAME: '',
       INWARDED_BY: '',
-      REFDOCTYP: '',
+      REFDOCTYP: 'PO',
       LEDAT: '',
       LETIM: '',
       TRADDR: '',
@@ -515,19 +530,19 @@ export default function InwardPOReference() {
 
   const columns = [
     {
-  key: 'CHK',
-  header: '',
-  width: '50px',
-  render: (_value: string, _row: ItemRow, index: number) => (
-    <input
-      type="checkbox"
-      checked={items[index]?.CHK === 'X'}
-      onChange={(e) =>
-        handleItemChange(index, 'CHK', e.target.checked ? 'X' : '')
-      }
-    />
-  ),
-},
+      key: 'CHK',
+      header: '',
+      width: '50px',
+      render: (_value: string, _row: ItemRow, index: number) => (
+        <input
+          type="checkbox"
+          checked={items[index]?.CHK === 'X'}
+          onChange={(e) =>
+            handleItemChange(index, 'CHK', e.target.checked ? 'X' : '')
+          }
+        />
+      ),
+    },
     {
       key: 'MATNR',
       header: 'Material Code',
@@ -567,12 +582,7 @@ export default function InwardPOReference() {
         />
       ),
     },
-    {
-      key: 'ZMEINS',
-      header: 'Unit',
-      width: '80px',
-      render: (value: string, row: ItemRow) => value || row.CHUOM,
-    },
+
     {
       key: 'ZPACKING',
       header: 'Packing Condition',
@@ -599,7 +609,27 @@ export default function InwardPOReference() {
     },
   ];
 
+
+const FullScreenLoader = () => {
+  // We create the element to be teleported
+  const loaderContent = (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="flex flex-col items-center gap-4 p-6 bg-white/10 rounded-lg border border-white/20">
+        <div className="w-12 h-12 border-4 border-t-blue-500 border-white/20 rounded-full animate-spin" />
+        <p className="text-white font-medium text-lg tracking-wide">
+          Please Wait Loading...
+        </p>
+      </div>
+    </div>
+  );
+
+  // We render it into the body instead of the local component tree
+  return createPortal(loaderContent, document.body);
+};
+
   return (
+
+    
     <div className="space-y-6">
       <PageHeader
         title="Inward Gate Entry - PO Reference"
@@ -645,16 +675,20 @@ export default function InwardPOReference() {
             value={headerData.VNAME}
             readOnly
           />
-          <div className="pb-0.5">
-            <Button onClick={handleFetchPO} disabled={isLoading} className="gap-2 w-full h-10 bg-primary text-primary-foreground hover:bg-primary/90">
-              {isLoading ? (
-                <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-              ) : (
-                <Search className="w-4 h-4" />
-              )}
-              Fetch PO Data
-            </Button>
-          </div>
+          <>
+            {/* Full Screen Spinner */}
+            {isLoading && <FullScreenLoader />}
+
+            <div className="pb-0.5">
+              <Button
+                onClick={handleFetchPO}
+                disabled={isLoading}
+                className="..."
+              >
+                {isLoading ? "Processing..." : "Fetch PO Data"}
+              </Button>
+            </div>
+          </>
         </div>
       </FormSection>
 
@@ -671,11 +705,13 @@ export default function InwardPOReference() {
             label="Ref Doc Type"
             value={headerData.REFDOCTYP}
             readOnly
+            required
           />
           <TextField
             label="Gate Entry Type"
             value={headerData.DTYPE}
             readOnly
+            required
           />
           <TextField
             label="Inward By"
@@ -683,20 +719,7 @@ export default function InwardPOReference() {
             onChange={(value) => setHeaderData({ ...headerData, INWARDED_BY: value })}
             placeholder="Enter user name"
           />
-          <TextField
-            label="Vehicle Date"
-            type="date"
-            value={headerData.VHDAT_IN}
-            onChange={(value) => setHeaderData({ ...headerData, VHDAT_IN: value })}
-            required
-          />
-          <TextField
-            label="Vehicle Time"
-            type="time"
-            value={headerData.VHTIM_IN}
-            onChange={(value) => setHeaderData({ ...headerData, VHTIM_IN: value })}
-            required
-          />
+
         </div>
       </FormSection>
 
@@ -712,6 +735,7 @@ export default function InwardPOReference() {
           />
           <SelectField
             label="Vehicle Type"
+            required
             value={headerData.VHCL_TYPE}
             onChange={(value) => setHeaderData({ ...headerData, VHCL_TYPE: value })}
             options={[
@@ -719,6 +743,20 @@ export default function InwardPOReference() {
               { value: 'OWN', label: 'Own Vehicle' },
 
             ]}
+          />
+          <TextField
+            label="Vehicle Date"
+            type="date"
+            value={headerData.VHDAT_IN}
+            onChange={(value) => setHeaderData({ ...headerData, VHDAT_IN: value })}
+            required
+          />
+          <TextField
+            label="Vehicle Time"
+            type="time"
+            value={headerData.VHTIM_IN}
+            onChange={(value) => setHeaderData({ ...headerData, VHTIM_IN: value })}
+            required
           />
           <TextField
             label="Driver Name"
@@ -734,6 +772,7 @@ export default function InwardPOReference() {
           />
           <SelectField
             label="Transporter Name"
+            required
             value={headerData.TRANNAM}
             onChange={(value) => setHeaderData({ ...headerData, TRANNAM: value })}
             options={transporterOptions}
@@ -783,34 +822,36 @@ export default function InwardPOReference() {
               maxHeight="350px"
               itemsPerPage={10}
             />
-         <div className="flex justify-end gap-2 mt-4 pt-4 border-t">
-  <Button variant="outline" onClick={handleReset} className="gap-2" disabled={isLoading}>
-    <RotateCcw className="w-4 h-4" />
-    Reset
-  </Button>
+            <div className="flex justify-end gap-2 mt-4 pt-4 border-t">
+              <Button variant="outline" onClick={handleReset} className="gap-2" disabled={isLoading}>
+                <RotateCcw className="w-4 h-4" />
+                Reset
+              </Button>
 
-  <Button
-    onClick={handleSave}
-    disabled={isLoading}
-    className="bg-accent text-accent-foreground hover:bg-accent/90 gap-2"
-  >
-    {isLoading ? (
-      <>
-        <Loader2 className="w-4 h-4 animate-spin" />
-        Saving...
-      </>
-    ) : (
-      <>
-        <Save className="w-4 h-4" />
-        Save Entry
-      </>
-    )}
-  </Button>
-</div>
+              <Button
+                onClick={handleSave}
+                disabled={isLoading}
+                className="bg-accent text-accent-foreground hover:bg-accent/90 gap-2"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    Save Entry
+                  </>
+                )}
+              </Button>
+            </div>
 
           </>
         )}
       </FormSection>
     </div>
   );
+
+  
 }

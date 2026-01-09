@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Save, RotateCcw, FileSpreadsheet, Plus, Trash2 } from 'lucide-react';
+import { Search, Save, RotateCcw, FileSpreadsheet, Plus, Trash2 ,Loader2} from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { FormSection } from '@/components/shared/FormSection';
 import { TextField, SelectField } from '@/components/shared/FormField';
@@ -10,81 +10,231 @@ import { toast } from 'sonner';
 import { exportToExcel, transporterOptions, packingConditionOptions } from '@/lib/exportToExcel';
 import { materialMaster, getMaterialByCode } from '@/lib/materialMaster';
 import { useAuth } from '@/contexts/AuthContext';
+import service from "../../services/generalservice.js";
+import Swal from "sweetalert2";
+import { createPortal } from 'react-dom';
+
 
 interface ItemRow {
-  materialCode: string;
-  materialDescription: string;
-  poQty: string;
-  balanceQty: string;
-  gateEntryQty: string;
-  unit: string;
-  packingCondition: string;
-}
+  "GENO": string,
+  "EBELN": number,
+  "ITEM": number,
+  "WTSNO": number,
+  "CHQTY": number,
+  "CHUOM": string,
+  "VGBEL": string,
+  "VGPOS": number,
+  "EXTROW": number,
+  "MATNR": number,
+  "MAKTX": string,
+  "GRWGT": number,
+  "GRDAT": string,
+  "GRTIM": string,
+  "GRUSR": string,
+  "TRWGT": number,
+  "TRDAT": string,
+  "TRTIM": string,
+  "TRUSR": string,
+  "WUNIT": string,
+  "NTWGT": number,
+  "STATUS": string,
+  "INVNO": string,
+  "INVDAT": string,
+  "CVNO": number,
+  "CVNO1": string,
+  "CVNAME": string,
+  "CVNAME1": string,
+  "CVLOC": string,
+  "TRNGRNO": string,
+  "MBLNR": string,
+  "MJAHR": number,
+  "ZEILE": number,
+  "EBELP": number,
+  "VBELN": string,
+  "POSNR": number,
+  "WEPOS": string,
+  "CHARG": string,
+  "CHK": string,
+  "ZQUANT": number,
+  "ZMEINS": string,
+  "ZPACKING": string,
+  "BLQTY": number,
+  "BLUNIT": string
 
+}
 const emptyItem: ItemRow = {
-  materialCode: '',
-  materialDescription: '',
-  poQty: '',
-  balanceQty: '',
-  gateEntryQty: '',
-  unit: '',
-  packingCondition: '',
+  "GENO": "",
+  "EBELN": null,
+  "ITEM": null,
+  "WTSNO": null,
+  "CHQTY": null,
+  "CHUOM": "",
+  "VGBEL": "",
+  "VGPOS": null,
+  "EXTROW": null,
+  "MATNR": null,
+  "MAKTX": "",
+  "GRWGT": null,
+  "GRDAT": "",
+  "GRTIM": "",
+  "GRUSR": "",
+  "TRWGT": null,
+  "TRDAT": "",
+  "TRTIM": "",
+  "TRUSR": "",
+  "WUNIT": "",
+  "NTWGT": null,
+  "STATUS": "",
+  "INVNO": "",
+  "INVDAT": "",
+  "CVNO": null,
+  "CVNO1": "",
+  "CVNAME": "",
+  "CVNAME1": "",
+  "CVLOC": "",
+  "TRNGRNO": "",
+  "MBLNR": "",
+  "MJAHR": null,
+  "ZEILE": null,
+  "EBELP": null,
+  "VBELN": "",
+  "POSNR": null,
+  "WEPOS": "",
+  "CHARG": "",
+  "CHK": "",
+  "ZQUANT": null,
+  "ZMEINS": "",
+  "ZPACKING": "",
+  "BLQTY": null,
+  "BLUNIT": ""
 };
+
+// const emptyItem: ItemRow = {
+//   materialCode: '',
+//   materialDescription: '',
+//   poQty: '',
+//   balanceQty: '',
+//   gateEntryQty: '',
+//   unit: '',
+//   packingCondition: '',
+// };
 
 const ITEMS_PER_PAGE = 10;
 
 // Simulate PO data fetch
 const fetchPOData = (poNumber: string) => {
   // Simulated PO data
-  const poItems: ItemRow[] = [
-    { materialCode: 'MAT001', materialDescription: 'Steel Plate 10mm', poQty: '500', balanceQty: '300', gateEntryQty: '', unit: 'KG', packingCondition: '' },
-    { materialCode: 'MAT002', materialDescription: 'Copper Wire 2.5mm', poQty: '1000', balanceQty: '750', gateEntryQty: '', unit: 'MTR', packingCondition: '' },
-    { materialCode: 'MAT003', materialDescription: 'Aluminium Rod 8mm', poQty: '200', balanceQty: '150', gateEntryQty: '', unit: 'NOS', packingCondition: '' },
-    { materialCode: 'MAT005', materialDescription: 'Brass Fitting 1"', poQty: '100', balanceQty: '80', gateEntryQty: '', unit: 'NOS', packingCondition: '' },
-    { materialCode: 'MAT008', materialDescription: 'Stainless Steel Bolt M10', poQty: '500', balanceQty: '400', gateEntryQty: '', unit: 'NOS', packingCondition: '' },
-  ];
-  
-  return {
-    vendorNumber: 'V1001',
-    vendorName: 'ABC Subcontractor Pvt. Ltd.',
-    vendorAddress: 'Industrial Area, Phase 2',
-    vendorCity: 'Pune',
-    vendorContact: '+91 98765 43210',
-    vendorGSTNo: '27AABCU9603R1ZM',
-    items: poItems,
-  };
+  // const poItems: ItemRow[] = [
+  //   { materialCode: 'MAT001', materialDescription: 'Steel Plate 10mm', poQty: '500', balanceQty: '300', gateEntryQty: '', unit: 'KG', packingCondition: '' },
+  //   { materialCode: 'MAT002', materialDescription: 'Copper Wire 2.5mm', poQty: '1000', balanceQty: '750', gateEntryQty: '', unit: 'MTR', packingCondition: '' },
+  //   { materialCode: 'MAT003', materialDescription: 'Aluminium Rod 8mm', poQty: '200', balanceQty: '150', gateEntryQty: '', unit: 'NOS', packingCondition: '' },
+  //   { materialCode: 'MAT005', materialDescription: 'Brass Fitting 1"', poQty: '100', balanceQty: '80', gateEntryQty: '', unit: 'NOS', packingCondition: '' },
+  //   { materialCode: 'MAT008', materialDescription: 'Stainless Steel Bolt M10', poQty: '500', balanceQty: '400', gateEntryQty: '', unit: 'NOS', packingCondition: '' },
+  // ];
+
+  // return {
+  //   vendorNumber: 'V1001',
+  //   vendorName: 'ABC Subcontractor Pvt. Ltd.',
+  //   vendorAddress: 'Industrial Area, Phase 2',
+  //   vendorCity: 'Pune',
+  //   vendorContact: '+91 98765 43210',
+  //   vendorGSTNo: '27AABCU9603R1ZM',
+  //   items: poItems,
+  // };
 };
 
 export default function InwardSubcontracting() {
   const { webUser } = useAuth();
-  
+  const [vendorList, setVendorList] = useState<any[]>([]);
   const [headerData, setHeaderData] = useState({
-    gateEntryNo: '',
-    plant: '',
-    refDocType: 'Subcontracting',
-    gateEntryType: 'Inward',
-    vehicleDate: new Date().toISOString().split('T')[0],
-    vehicleTime: new Date().toTimeString().slice(0, 5),
-    vehicleNo: '',
-    driverName: '',
-    transporterName: '',
-    grLrNumber: '',
-    remarks: '',
-    subcontractPONo: '',
-    vendorNumber: '',
-    vendorName: '',
-    vendorAddress: '',
-    vendorCity: '',
-    vendorContact: '',
-    vendorGSTNo: '',
-    inwardedBy: '',
+    WERKS: '',
+    DTYPE: 'IN',
+    VHDAT_IN: new Date().toISOString().split('T')[0],
+    VHTIM_IN: new Date().toTimeString().slice(0, 8),
+    VHNO: '',
+    VHCL_TYPE: '',
+    DRNAM: '',
+    DRNUM: '',
+    TRANNAM: '',
+    GR_LR_NUM: '',
+    PONO: '',
+    VENDOR: '',
+    VNAME: '',
+    INWARDED_BY: '',
+    REFDOCTYP: 'SUB',
+    LEDAT: '',
+    LETIM: '',
+    TRADDR: '',
+    REMARKS: '',
+
+    "GENO": "",
+    "USR_IN": "",
+    "GRWGT": 0,
+    "TRWGT": 0,
+    "NTWGT": 0,
+    "WUNIT": "",
+    "GRUSR": "",
+    "GRDAT": "",
+    "GRTIM": "",
+    "TRUSR": "",
+    "TRDAT": "",
+    "TRTIM": "",
+    "INIWT": 0,
+    "INIDT": "",
+    "INITM": "00:00:00",
+    "INIUR": "",
+    "TOTWGT": 0,
+    "RBSTAT": "",
+    "WBOMP": "",
+    "WBCOMP": "",
+    "GEEXT": "",
+    "LEUSR": "",
+    "SGTXT": "",
+    "GECAN": "",
+    "LCDAT": "0000-00-00",
+    "LCTIM": "00:00:00",
+    "LCUSR": "",
+    "SCTXT": "",
+    "ERNAM": "",
+    "LIFNR": "",
+    "GATEPASS": "",
+    "DESTINATION": "",
+    "CAPACITY": "",
+    "WBIND": "",
+    "MIX": "",
+    "MJAHR": 0,
+    "AMOUNT": 0,
+    "ZTRID": "",
+    "ZTRIP": "",
+    "SP_DES": "",
+    "PAYMENTTERMS": "",
+    "TOT_COSUME": "",
+    "PEND_AMOUNT": "",
+    "BLNO": "",
+    "PURPOSE": "",
+    "REUSE": ""
   });
+  useEffect(() => {
+    const fetchVendors = async () => {
+      try {
+        const res = await service.vendorlist(); // API call
+        setVendorList(res || []);
+        console.log("res", res)
+      } catch (err) {
+        toast.error('Failed to load vendors');
+      }
+    };
+
+    fetchVendors();
+  }, []);
 
   useEffect(() => {
-    setHeaderData(prev => ({ ...prev, inwardedBy: webUser }));
+    setHeaderData(prev => ({ ...prev, INWARDED_BY: webUser }));
+    setItems(Array(0).fill(null).map(() => ({ ...emptyItem })));
+    handleAddRow()
   }, [webUser]);
 
-  const [items, setItems] = useState<ItemRow[]>(Array(5).fill(null).map(() => ({ ...emptyItem })));
+  const [items, setItems] = useState<ItemRow[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [isPoMode, setIsPoMode] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -94,64 +244,82 @@ export default function InwardSubcontracting() {
   const endIndex = startIndex + ITEMS_PER_PAGE;
   const paginatedItems = items.slice(startIndex, endIndex);
 
-  const handleFetchPO = () => {
-    if (!headerData.plant) {
-      toast.error('Please select Plant first');
-      return;
-    }
-    if (!headerData.subcontractPONo) {
-      toast.error('Please enter Subcontract PO Number');
-      return;
-    }
+  // const handleFetchPO = () => {
+  //   if (!headerData.WERKS) {
+  //     toast.error('Please select Plant first');
+  //     return;
+  //   }
 
-    setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      const poData = fetchPOData(headerData.subcontractPONo);
-      setHeaderData(prev => ({
-        ...prev,
-        vendorNumber: poData.vendorNumber,
-        vendorName: poData.vendorName,
-        vendorAddress: poData.vendorAddress,
-        vendorCity: poData.vendorCity,
-        vendorContact: poData.vendorContact,
-        vendorGSTNo: poData.vendorGSTNo,
-      }));
-      setItems(poData.items);
-      setIsPoMode(true);
-      setIsLoading(false);
-      setCurrentPage(1);
-      toast.success('PO data fetched successfully');
-    }, 800);
-  };
+
+  //   setIsLoading(true);
+  //   // Simulate API call
+  //   setTimeout(() => {
+  //     const poData = fetchPOData(headerData.subcontractPONo);
+  //     setHeaderData(prev => ({
+  //       ...prev,
+  //       vendorNumber: poData.vendorNumber,
+  //       vendorName: poData.vendorName,
+  //       vendorAddress: poData.vendorAddress,
+  //       vendorCity: poData.vendorCity,
+  //       vendorContact: poData.vendorContact,
+  //       vendorGSTNo: poData.vendorGSTNo,
+  //     }));
+  //     setItems(poData.items);
+  //     setIsPoMode(true);
+  //     setIsLoading(false);
+  //     setCurrentPage(1);
+  //     toast.success('PO data fetched successfully');
+  //   }, 800);
+  // };
 
   const handleMaterialCodeChange = (pageIndex: number, code: string) => {
     const actualIndex = startIndex + pageIndex;
     const material = getMaterialByCode(code);
-    setItems(prev => prev.map((item, i) => 
-      i === actualIndex 
-        ? { 
-            ...item, 
-            materialCode: code, 
-            materialDescription: material?.description || '',
-            unit: material?.unit || item.unit
-          } 
+    setItems(prev => prev.map((item, i) =>
+      i === actualIndex
+        ? {
+          ...item,
+          materialCode: code,
+          materialDescription: material?.description || '',
+          unit: material?.unit || item.CHUOM
+        }
         : item
     ));
   };
 
-  const handleItemChange = (pageIndex: number, field: keyof ItemRow, value: string) => {
-    const actualIndex = startIndex + pageIndex;
-    setItems(prev => prev.map((item, i) => 
-      i === actualIndex ? { ...item, [field]: value } : item
-    ));
+  const handleItemChange = (
+    index: number,
+    field: keyof ItemRow,
+    value: any
+  ) => {
+    setItems((prev) =>
+      prev.map((item, i) =>
+        i === index ? { ...item, [field]: value } : item
+      )
+    );
   };
 
   const handleAddRow = () => {
-    setItems(prev => [...prev, { ...emptyItem }]);
-    const newTotalPages = Math.ceil((items.length + 1) / ITEMS_PER_PAGE);
-    setCurrentPage(newTotalPages);
+    setItems(prev => {
+      const nextItemNo =
+        prev.length > 0 ? prev[prev.length - 1].ITEM + 10 : 10;
+
+      const newRow: ItemRow = {
+        ...emptyItem,
+        ITEM: nextItemNo,
+        CHK: '',
+      };
+
+      const updated = [...prev, newRow];
+
+      // move to last page after adding
+      const newTotalPages = Math.ceil(updated.length / ITEMS_PER_PAGE);
+      setCurrentPage(newTotalPages);
+
+      return updated;
+    });
   };
+
 
   const handleDeleteRow = (pageIndex: number) => {
     const actualIndex = startIndex + pageIndex;
@@ -164,39 +332,173 @@ export default function InwardSubcontracting() {
     }
   };
 
-  const handleSave = () => {
-    toast.success('Gate Entry saved successfully!');
+  const handleSave = async () => {
+    console.log("headerData", headerData)
+    console.log("items", items)
+    const selectedItems = items.filter(item => item.CHK === "X");
+
+    if (selectedItems.length === 0) {
+      Swal.fire({
+        title: "Validation Error",
+        text: "Please select at least one item to save.",
+        icon: "warning",
+        confirmButtonColor: "#f0ad4e",
+      });
+      return;
+    }
+    const payload = {
+      CREATE: "X",
+      CHANGE: "",
+      SEL: "",
+      CEL: "",
+      ICON: "",
+      HEADER: [headerData],
+      ITEM: items,
+    };
+    console.log("payload", payload)
+    setIsLoading(true);
+    try {
+
+      const response = await service.GateEntryCreation(payload);
+      console.log("response", response);
+
+      // ✅ Ensure response is array
+      if (!Array.isArray(response) || response.length === 0) {
+        Swal.fire("Error", "Invalid response from server", "error");
+        return;
+      }
+
+      // 🔴 Collect errors
+      const errorMessages = response
+        .filter(r => r.MSG_TYPE === "E")
+        .map(r => `• ${r.MSG}`);
+
+      // 🟡 Collect warnings
+      const warningMessages = response
+        .filter(r => r.MSG_TYPE === "I")
+        .map(r => `• ${r.MSG}`);
+
+      // 🟢 Success message
+      const successMsg = response.find(r => r.MSG_TYPE === "S");
+
+      // ❌ If errors exist → show all errors
+      if (errorMessages.length > 0) {
+        Swal.fire({
+          title: "Error",
+          html: errorMessages.join("<br>"),
+          icon: "error",
+          confirmButtonColor: "#d33",
+        });
+        return;
+      }
+
+      // ⚠️ If warnings exist
+      if (warningMessages.length > 0) {
+        Swal.fire({
+          title: "Warning",
+          html: warningMessages.join("<br>"),
+          icon: "warning",
+          confirmButtonColor: "#f0ad4e",
+        });
+      }
+
+      // ✅ Success
+      if (successMsg || response[0]?.CODE === "200") {
+        Swal.fire({
+          title: "Success",
+          text: successMsg?.MSG || "Gate Entry updated successfully",
+          icon: "success",
+          confirmButtonColor: "#3085d6",
+        });
+
+        // ✅ Reset state after success
+        handleReset();
+      }
+
+    } catch (err) {
+      console.error(err);
+      Swal.fire("Error", "Failed to save Gate Entry", "error");
+    } finally {
+      setIsLoading(false); // ✅ Spinner OFF always
+    }
   };
 
   const handleReset = () => {
     setHeaderData({
-      gateEntryNo: '',
-      plant: '',
-      refDocType: 'Subcontracting',
-      gateEntryType: 'Inward',
-      vehicleDate: new Date().toISOString().split('T')[0],
-      vehicleTime: new Date().toTimeString().slice(0, 5),
-      vehicleNo: '',
-      driverName: '',
-      transporterName: '',
-      grLrNumber: '',
-      remarks: '',
-      subcontractPONo: '',
-      vendorNumber: '',
-      vendorName: '',
-      vendorAddress: '',
-      vendorCity: '',
-      vendorContact: '',
-      vendorGSTNo: '',
-      inwardedBy: webUser,
+      WERKS: '',
+      DTYPE: 'IN',
+      "VHDAT_IN": new Date().toISOString().split('T')[0], //Vehicle IN Date    //System Generated
+      "VHTIM_IN": new Date().toTimeString().slice(0, 5), //Vehicle IN time  
+      VHNO: '',
+      VHCL_TYPE: '',
+      DRNAM: '',
+      DRNUM: '',
+      TRANNAM: '',
+      GR_LR_NUM: '',
+      PONO: '',
+      VENDOR: '',
+      VNAME: '',
+      INWARDED_BY: '',
+      REFDOCTYP: 'SUB',
+      LEDAT: '',
+      LETIM: '',
+      TRADDR: '',
+      REMARKS: '',
+      GENO: '',
+      USR_IN: '',
+      GRWGT: 0,
+      TRWGT: 0,
+      NTWGT: 0,
+      WUNIT: '',
+      GRUSR: '',
+      GRDAT: '',
+      GRTIM: '',
+      TRUSR: '',
+      TRDAT: '',
+      TRTIM: '',
+      INIWT: 0,
+      INIDT: '',
+      INITM: '00:00:00',
+      INIUR: '',
+      TOTWGT: 0,
+      RBSTAT: '',
+      WBOMP: '',
+      WBCOMP: '',
+      GEEXT: '',
+      LEUSR: '',
+      SGTXT: '',
+      GECAN: '',
+      LCDAT: '0000-00-00',
+      LCTIM: '00:00:00',
+      LCUSR: '',
+      SCTXT: '',
+      ERNAM: '',
+      LIFNR: '',
+      GATEPASS: '',
+      DESTINATION: '',
+      CAPACITY: '',
+      WBIND: '',
+      MIX: '',
+      MJAHR: 0,
+      AMOUNT: 0,
+      ZTRID: '',
+      ZTRIP: '',
+      SP_DES: '',
+      PAYMENTTERMS: '',
+      TOT_COSUME: '',
+      PEND_AMOUNT: '',
+      BLNO: '',
+      PURPOSE: '',
+      REUSE: ''
     });
-    setItems(Array(5).fill(null).map(() => ({ ...emptyItem })));
+    setItems(Array(0).fill(null).map(() => ({ ...emptyItem })));
+    handleAddRow()
     setCurrentPage(1);
     setIsPoMode(false);
   };
 
   const handleExport = () => {
-    const filledItems = items.filter(item => item.materialCode || item.materialDescription);
+    const filledItems = items.filter(item => item.MATNR || item.MAKTX);
     if (filledItems.length === 0) {
       toast.error('No items to export');
       return;
@@ -210,8 +512,24 @@ export default function InwardSubcontracting() {
       { key: 'unit', header: 'Unit' },
       { key: 'packingCondition', header: 'Packing Condition' },
     ];
-    exportToExcel(filledItems, exportColumns, `Inward_Subcontract_${headerData.subcontractPONo || 'New'}`);
-    toast.success('Exported to Excel successfully');
+    //   exportToExcel(filledItems, exportColumns, `Inward_Subcontract_${headerData.subcontractPONo || 'New'}`);
+    //   toast.success('Exported to Excel successfully');
+  };
+  const FullScreenLoader = () => {
+    // We create the element to be teleported
+    const loaderContent = (
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div className="flex flex-col items-center gap-4 p-6 bg-white/10 rounded-lg border border-white/20">
+          <div className="w-12 h-12 border-4 border-t-blue-500 border-white/20 rounded-full animate-spin" />
+          <p className="text-white font-medium text-lg tracking-wide">
+            Please Wait Loading...
+          </p>
+        </div>
+      </div>
+    );
+
+    // We render it into the body instead of the local component tree
+    return createPortal(loaderContent, document.body);
   };
 
   return (
@@ -222,84 +540,162 @@ export default function InwardSubcontracting() {
         breadcrumbs={[{ label: 'Inward', path: '/inward/subcontracting' }, { label: 'Subcontracting' }]}
       />
 
-      <FormSection title="Subcontract Reference">
-        <div className="flex flex-wrap items-end gap-4">
-          <div className="w-40">
-            <SelectField
-              label="Plant"
-              value={headerData.plant}
-              onChange={(value) => setHeaderData({ ...headerData, plant: value })}
-              options={[
-                { value: '1000', label: '1000 - Main Plant' },
-                { value: '2000', label: '2000 - Warehouse' },
-                { value: '3000', label: '3000 - Factory' },
-              ]}
-              required
-            />
-          </div>
-          <div className="w-44">
-            <TextField
-              label="Subcontract PO Number"
-              value={headerData.subcontractPONo}
-              onChange={(value) => setHeaderData({ ...headerData, subcontractPONo: value })}
-              placeholder="Enter PO Number"
-            />
-          </div>
-          <div className="w-40">
-            <TextField label="Vendor Number" value={headerData.vendorNumber} onChange={(value) => setHeaderData({ ...headerData, vendorNumber: value })} placeholder="Vendor number" disabled={isPoMode} />
-          </div>
-          <div className="w-44">
-            <TextField label="Vendor Name" value={headerData.vendorName} onChange={(value) => setHeaderData({ ...headerData, vendorName: value })} placeholder="Vendor name" disabled={isPoMode} />
-          </div>
-          <Button onClick={handleFetchPO} disabled={isLoading} className="gap-2 h-10">
-            {isLoading ? (
-              <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-            ) : (
-              <Search className="w-4 h-4" />
-            )}
-            Fetch PO
-          </Button>
+      {/* <FormSection title="Subcontract Reference">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
+          <TextField
+            label="Plant"
+            value={headerData.WERKS}
+            onChange={(value) => setHeaderData({ ...headerData, WERKS: value })}
+            placeholder="Enter PO Number"
+            required
+          />
+          <SelectField
+            label="Plant"
+            value={headerData.plant}
+            onChange={(value) => setHeaderData({ ...headerData, plant: value })}
+            options={[
+              { value: '1000', label: '1000' },
+              { value: '2000', label: '2000' },
+              { value: '3000', label: '3000' },
+            ]}
+            required
+          />
+          <TextField
+            label="PO Number"
+            value={headerData.PONO}
+            onChange={(value) => setHeaderData({ ...headerData, PONO: value })}
+            placeholder="Enter PO Number"
+            required
+          />
+          <TextField
+            label="Vendor Number"
+            value={headerData.VENDOR}
+            onChange={(value) => setHeaderData({ ...headerData, VENDOR: value })}
+
+          />
+          <TextField
+            label="Vendor Name"
+            value={headerData.VNAME}
+            onChange={(value) => setHeaderData({ ...headerData, VNAME: value })}
+          />
+
         </div>
         {isPoMode && (
           <div className="mt-3 p-3 bg-accent/10 rounded-lg border border-accent/20">
             <p className="text-sm text-accent font-medium">PO Mode Active - Items fetched from PO: {headerData.subcontractPONo}</p>
           </div>
         )}
-      </FormSection>
+      </FormSection> */}
 
       <FormSection title="Header Information">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <TextField label="Gate Entry No" value={headerData.gateEntryNo} placeholder="Auto-generated" readOnly />
-          <TextField label="Ref Doc Type" value={headerData.refDocType} readOnly />
-          <TextField label="Gate Entry Type" value={headerData.gateEntryType} readOnly />
-          <TextField label="Inward By" value={headerData.inwardedBy} onChange={(value) => setHeaderData({ ...headerData, inwardedBy: value })} placeholder="Enter user name" />
-          <TextField label="Vehicle Date" type="date" value={headerData.vehicleDate} onChange={(value) => setHeaderData({ ...headerData, vehicleDate: value })} required />
-          <TextField label="Vehicle Time" type="time" value={headerData.vehicleTime} onChange={(value) => setHeaderData({ ...headerData, vehicleTime: value })} required />
+          <TextField
+            label="Plant"
+            value={headerData.WERKS}
+            onChange={(value) => setHeaderData({ ...headerData, WERKS: value })}
+            placeholder="Enter PO Plant"
+            required
+          />
+          <TextField
+            label="Gate Entry No"
+            value={headerData.GENO}
+            placeholder="Auto-generated"
+            readOnly
+          />
+          <TextField
+            label="Ref Doc Type"
+            value={headerData.REFDOCTYP}
+            readOnly
+            required
+          />
+          <TextField
+            label="Gate Entry Type"
+            value={headerData.DTYPE}
+            readOnly
+            required
+          />
+          <TextField
+            label="Inward By"
+            value={headerData.INWARDED_BY}
+            onChange={(value) => setHeaderData({ ...headerData, INWARDED_BY: value })}
+            placeholder="Enter user name"
+            required
+          />
+          <TextField
+            label="Vehicle Date"
+            type="date"
+            value={headerData.VHDAT_IN}
+            onChange={(value) => setHeaderData({ ...headerData, VHDAT_IN: value })}
+            required
+          />
+          <TextField
+            label="Vehicle Time"
+            type="time"
+            value={headerData.VHTIM_IN}
+            onChange={(value) => setHeaderData({ ...headerData, VHTIM_IN: value })}
+            required
+          />
         </div>
       </FormSection>
 
       <FormSection title="Vehicle & Transport Details">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <TextField label="Vehicle No" value={headerData.vehicleNo} onChange={(value) => setHeaderData({ ...headerData, vehicleNo: value })} placeholder="MH-12-AB-1234" required />
-          <TextField label="Driver Name" value={headerData.driverName} onChange={(value) => setHeaderData({ ...headerData, driverName: value })} placeholder="Enter driver name" />
+          <TextField
+            label="Vehicle No"
+            value={headerData.VHNO}
+            onChange={(value) => setHeaderData({ ...headerData, VHNO: value })}
+            placeholder="MH-12-AB-1234"
+            required
+          />
+          <SelectField
+            label="Vehicle Type"
+            required
+            value={headerData.VHCL_TYPE}
+            onChange={(value) => setHeaderData({ ...headerData, VHCL_TYPE: value })}
+            options={[
+              { value: 'HIRE', label: 'Hire Vehicle' },
+              { value: 'OWN', label: 'Own Vehicle' },
+
+            ]}
+          />
+          <TextField
+            label="Driver Name"
+
+            value={headerData.DRNAM}
+            onChange={(value) => setHeaderData({ ...headerData, DRNAM: value })}
+            placeholder="Enter driver name"
+          />
+          <TextField
+            label="Driver Contact"
+            value={headerData.DRNUM}
+            onChange={(value) => setHeaderData({ ...headerData, DRNUM: value })}
+            placeholder="+91 98765 43210"
+          />
           <SelectField
             label="Transporter Name"
-            value={headerData.transporterName}
-            onChange={(value) => setHeaderData({ ...headerData, transporterName: value })}
+            required
+            value={headerData.TRANNAM}
+            onChange={(value) => setHeaderData({ ...headerData, TRANNAM: value })}
             options={transporterOptions}
           />
           <TextField
             label="GR/LR Number"
-            value={headerData.grLrNumber}
-            onChange={(value) => setHeaderData({ ...headerData, grLrNumber: value })}
+            value={headerData.GR_LR_NUM}
+            onChange={(value) => setHeaderData({ ...headerData, GR_LR_NUM: value })}
             placeholder="Enter GR/LR number"
           />
-          <TextField
-            label="Remarks"
-            value={headerData.remarks}
-            onChange={(value) => setHeaderData({ ...headerData, remarks: value })}
-            placeholder="Enter remarks"
-          />
+          <div className="md:col-span-2">
+            <TextField
+              label="Remarks"
+              value={headerData.REMARKS}
+              onChange={(value) => {
+                if (value.length <= 255) {
+                  setHeaderData({ ...headerData, REMARKS: value });
+                }
+              }}
+              placeholder="Enter remarks (max 255 characters)"
+            />
+          </div>
         </div>
       </FormSection>
 
@@ -312,112 +708,171 @@ export default function InwardSubcontracting() {
         </div>
         <div className="data-grid">
           <div className="overflow-auto scrollbar-thin" style={{ maxHeight: '400px' }}>
-            <table className="w-full">
-              <thead>
+            <table className="w-full border-collapse">
+              <thead className="bg-muted">
                 <tr>
-                  <th className="w-12 text-center">#</th>
-                  <th className="w-40">Material Code</th>
-                  <th>Material Description</th>
-                  {isPoMode && (
-                    <>
-                      <th className="w-24">PO Qty</th>
-                      <th className="w-24">Balance Qty</th>
-                    </>
-                  )}
-                  <th className="w-28">Gate Entry Qty</th>
-                  <th className="w-20">Unit</th>
-                  <th className="w-36">Packing Condition</th>
-                  {!isPoMode && <th className="w-20 text-center">Action</th>}
+                  <th className="w-10 text-center">
+                    <input
+                      type="checkbox"
+                      checked={items.length > 0 && items.every(i => i.CHK === 'X')}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setItems(prev =>
+                          prev.map(item => ({
+                            ...item,
+                            CHK: checked ? 'X' : ''
+                          }))
+                        );
+                      }}
+                    />
+                  </th>
+
+                  <th className="w-16 text-center">Item</th>
+                  <th className="w-32">Material Code</th>
+                  <th className="w-60">Material Description</th>
+                  <th className="w-24 text-center">PO Qty</th>
+                  <th className="w-24 text-center">PO Unit</th>
+                  <th className="w-32">Vendor</th>
+                  <th className="w-40">Vendor Name</th>
+                  <th className="w-40">Packing Condition</th>
+                  <th className="w-16 text-center">Action</th>
                 </tr>
               </thead>
+
               <tbody>
                 {paginatedItems.map((item, pageIndex) => {
                   const actualIndex = startIndex + pageIndex;
+
                   return (
-                    <tr key={actualIndex} className="group">
-                      <td className="text-center font-medium text-muted-foreground">{actualIndex + 1}</td>
-                      <td>
-                        {isPoMode ? (
-                          <Input value={item.materialCode} readOnly className="h-8 bg-muted/50" />
-                        ) : (
-                          <Select value={item.materialCode} onValueChange={(val) => handleMaterialCodeChange(pageIndex, val)}>
-                            <SelectTrigger className="h-8 w-full">
-                              <SelectValue placeholder="Select Material" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {materialMaster.map(mat => (
-                                <SelectItem key={mat.code} value={mat.code}>{mat.code}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        )}
+                    <tr key={actualIndex} className="border-b">
+                      {/* Checkbox */}
+                      <td className="text-center">
+                        <input
+                          type="checkbox"
+                          checked={item.CHK === 'X'}
+                          onChange={(e) =>
+                            handleItemChange(
+                              actualIndex,
+                              'CHK',
+                              e.target.checked ? 'X' : ''
+                            )
+                          }
+                        />
+
                       </td>
+
+                      {/* Item Number */}
                       <td>
                         <Input
-                          value={item.materialDescription}
+                          value={item.ITEM}
                           readOnly
-                          className="h-8 bg-muted/50"
-                          placeholder="Auto-populated"
+                          className="h-8 text-center bg-muted/50"
                         />
                       </td>
-                      {isPoMode && (
-                        <>
-                          <td>
-                            <Input value={item.poQty} readOnly className="h-8 bg-muted/50 text-center" />
-                          </td>
-                          <td>
-                            <Input value={item.balanceQty} readOnly className="h-8 bg-muted/50 text-center" />
-                          </td>
-                        </>
-                      )}
+
+                      {/* Material Code */}
+                      <td>
+                        <Input
+                          value={item.MATNR}
+                          onChange={(e) =>
+                            handleItemChange(actualIndex, 'MATNR', Number(e.target.value))
+                          }
+                          className="h-8"
+                        />
+                      </td>
+
+                      {/* Material Description */}
+                      <td>
+                        <Input
+                          value={item.MAKTX}
+                          onChange={(e) =>
+                            handleItemChange(actualIndex, 'MAKTX', e.target.value)
+                          }
+                          className="h-8"
+                        />
+                      </td>
+
+                      {/* PO Quantity */}
                       <td>
                         <Input
                           type="number"
-                          value={item.gateEntryQty}
-                          onChange={(e) => handleItemChange(pageIndex, 'gateEntryQty', e.target.value)}
-                          className="h-8"
-                          placeholder="Enter Qty"
+                          value={item.CHQTY}
+                          onChange={(e) =>
+                            handleItemChange(actualIndex, 'CHQTY', Number(e.target.value))
+                          }
+                          className="h-8 text-center"
                         />
                       </td>
+
+                      {/* PO Unit */}
                       <td>
                         <Input
-                          value={item.unit}
-                          readOnly
-                          className="h-8 bg-muted/50 text-center"
-                          placeholder="Unit"
+                          value={item.CHUOM}
+                          onChange={(e) =>
+                            handleItemChange(actualIndex, 'CHUOM', e.target.value)
+                          }
+                          className="h-8 text-center"
                         />
                       </td>
+
+                      {/* Vendor */}
                       <td>
-                        <Select value={item.packingCondition} onValueChange={(val) => handleItemChange(pageIndex, 'packingCondition', val)}>
-                          <SelectTrigger className="h-8 w-full">
+                        <Input
+                          value={item.CVNAME}
+                          onChange={(e) =>
+                            handleItemChange(actualIndex, 'CVNAME', e.target.value)
+                          }
+                          className="h-8"
+                        />
+                      </td>
+
+                      {/* Vendor Name */}
+                      <td>
+                        <Input
+                          value={item.CVNAME1}
+                          onChange={(e) =>
+                            handleItemChange(actualIndex, 'CVNAME1', e.target.value)
+                          }
+                          className="h-8"
+                        />
+                      </td>
+
+                      {/* Packing Condition */}
+                      <td>
+                        <Select
+                          value={item.ZPACKING}
+                          onValueChange={(val) =>
+                            handleItemChange(actualIndex, 'ZPACKING', val)
+                          }
+                        >
+                          <SelectTrigger className="h-8">
                             <SelectValue placeholder="Select" />
                           </SelectTrigger>
                           <SelectContent>
-                            {packingConditionOptions.map(opt => (
-                              <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                            ))}
+                            <SelectItem value="GOOD">Good</SelectItem>
+                            <SelectItem value="DAMAGED">Damaged</SelectItem>
+                            <SelectItem value="PARTIAL">Partial</SelectItem>
                           </SelectContent>
                         </Select>
                       </td>
-                      {!isPoMode && (
-                        <td className="text-center">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteRow(pageIndex)}
-                            disabled={items.length <= 1}
-                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                            title="Delete row"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </td>
-                      )}
+
+                      {/* Delete */}
+                      <td className="text-center">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteRow(pageIndex)}
+                          disabled={items.length <= 1}
+                        >
+                          🗑
+                        </Button>
+                      </td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
+
           </div>
         </div>
 
@@ -459,13 +914,33 @@ export default function InwardSubcontracting() {
         )}
 
         <div className="flex justify-end gap-2 mt-4 pt-4 border-t">
-          <Button variant="outline" onClick={handleReset} className="gap-2">
+          <Button
+            variant="outline"
+            onClick={handleReset}
+            className="gap-2"
+            disabled={isLoading} // Disable reset while saving
+          >
             <RotateCcw className="w-4 h-4" />
             Reset
           </Button>
-          <Button onClick={handleSave} className="bg-accent text-accent-foreground hover:bg-accent/90 gap-2">
-            <Save className="w-4 h-4" />
-            Save Entry
+
+          <Button
+            onClick={handleSave}
+            disabled={isLoading} // Prevents double clicking
+            className="bg-accent text-accent-foreground hover:bg-accent/90 gap-2 min-w-[120px]"
+          >
+            {isLoading ? (
+              <>
+                {/* Animated Loader Icon */}
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Saving...</span>
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4" />
+                <span>Save Entry</span>
+              </>
+            )}
           </Button>
         </div>
       </FormSection>

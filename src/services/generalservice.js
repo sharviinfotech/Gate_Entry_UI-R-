@@ -163,6 +163,14 @@ const backendNodejs = {
         });
         return res.json();
     },
+       vendorlist: async () => {
+        const res = await fetch(`${BASE_URL}api/external/Gate_Entry/VendorList`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+        });
+        return res.json();
+    },
+
 
 };
 

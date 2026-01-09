@@ -10,10 +10,14 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import service from "../services/generalservice.js"
 import Swal from "sweetalert2";
+
+import { createPortal } from 'react-dom';
+
 export default function VehicleExit() {
   const [gateEntryNo, setGateEntryNo] = useState('');
   const [isLoaded, setIsLoaded] = useState(false);
   const [exitConfirmed, setExitConfirmed] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Gate Entry Header (read-only, fetched from system)
   const [headerData, setHeaderData] = useState({
@@ -38,7 +42,7 @@ export default function VehicleExit() {
       toast.error('Enter Gate Entry No');
       return;
     }
-
+setIsLoading(true);
     try {
       const payload = {
         EXIT_GE: gateEntryNo,
@@ -120,6 +124,8 @@ export default function VehicleExit() {
     } catch (err) {
       console.error(err);
       toast.error("Failed to load Data");
+    }finally{
+      setIsLoading(false);
     }
   };
 
@@ -132,7 +138,7 @@ export default function VehicleExit() {
       toast.error('Please confirm Gate Entry Exit by enabling the checkbox');
       return;
     }
-
+setIsLoading(true);
     try {
       const payload = {
         "EXIT_CANCEL": {
@@ -184,13 +190,32 @@ export default function VehicleExit() {
     }
     catch (error) {
       console.log("error")
+    }finally{
+      setIsLoading(false);
     }
 
 
   };
 
+  const FullScreenLoader = () => {
+      // We create the element to be teleported
+      const loaderContent = (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-4 p-6 bg-white/10 rounded-lg border border-white/20">
+            <div className="w-12 h-12 border-4 border-t-blue-500 border-white/20 rounded-full animate-spin" />
+            <p className="text-white font-medium text-lg tracking-wide">
+              Please Wait Loading...
+            </p>
+          </div>
+        </div>
+      );
+  
+      // We render it into the body instead of the local component tree
+      return createPortal(loaderContent, document.body);
+    };
   return (
     <div className="space-y-6">
+      {isLoading && <FullScreenLoader />}
       <PageHeader
         title="Vehicle Exit"
         subtitle="Record vehicle departure"
@@ -207,7 +232,7 @@ export default function VehicleExit() {
             required
           />
           <div className="flex items-end">
-            <Button onClick={handleFetch} className="gap-2 w-full">
+            <Button onClick={handleFetch} disabled={isLoading} className="gap-2 w-full">
               <Search className="w-4 h-4" />
               Fetch
             </Button>

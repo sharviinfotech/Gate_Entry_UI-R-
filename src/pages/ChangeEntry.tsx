@@ -12,6 +12,8 @@ import { packingConditionOptions } from '@/lib/exportToExcel';
 import service from "../services/generalservice.js"
 import Swal from "sweetalert2";
 
+import { createPortal } from 'react-dom';
+
 interface ItemRow {
   "GENO": string,
   "EBELN": number,
@@ -143,59 +145,60 @@ export default function ChangeEntry() {
       toast.error('Please enter Gate Entry Number');
       return;
     }
-
+  setIsLoading(true);
     try {
       const payload = {
         "GET_ENTRY": gateEntryNo,
         "CHANGE": "X",
         "DISPLAY": ""
       }
+      setIsLoading(true);
       const response = await service.fetchGateEntryChange(payload);
       console.log("response", response)
-     if (response.length > 0) {
-     
-             const sucessMessages = response
-               .filter(r => r.MSG_TYPE === "S")
-               .map(r => `• ${r.MSG}`);
-             const errorMessages = response
-               .filter(r => r.MSG_TYPE === "E")
-               .map(r => `• ${r.MSG}`);
-               const warnigMessages = response
-               .filter(r => r.MSG_TYPE === "I")
-               .map(r => `• ${r.MSG}`);
-             if (sucessMessages.length > 0) {
-               Swal.fire({
-                 title: "success",
-                 html: sucessMessages.join("<br>"),
-                 icon: "success",
-                 confirmButtonColor: "#3085d6",
-               });
-               
-               return
-             }
-              if (warnigMessages.length > 0) {
-               Swal.fire({
-                 title: "success",
-                 html: warnigMessages.join("<br>"),
-                 icon: "success",
-                 confirmButtonColor: "#3085d6",
-               });
-               
-               return
-             }
-             if (errorMessages.length > 0) {
-               Swal.fire({
-                 title: "Error",
-                 html: errorMessages.join("<br>"),
-                 icon: "error",
-                 confirmButtonColor: "#d33",
-               });
-              
-     
-            
-               return
-             }
-           }else {
+      if (response.length > 0) {
+
+        const sucessMessages = response
+          .filter(r => r.MSG_TYPE === "S")
+          .map(r => `• ${r.MSG}`);
+        const errorMessages = response
+          .filter(r => r.MSG_TYPE === "E")
+          .map(r => `• ${r.MSG}`);
+        const warnigMessages = response
+          .filter(r => r.MSG_TYPE === "I")
+          .map(r => `• ${r.MSG}`);
+        if (sucessMessages.length > 0) {
+          Swal.fire({
+            title: "success",
+            html: sucessMessages.join("<br>"),
+            icon: "success",
+            confirmButtonColor: "#3085d6",
+          });
+
+          return
+        }
+        if (warnigMessages.length > 0) {
+          Swal.fire({
+            title: "success",
+            html: warnigMessages.join("<br>"),
+            icon: "success",
+            confirmButtonColor: "#3085d6",
+          });
+
+          return
+        }
+        if (errorMessages.length > 0) {
+          Swal.fire({
+            title: "Error",
+            html: errorMessages.join("<br>"),
+            icon: "error",
+            confirmButtonColor: "#d33",
+          });
+
+
+
+          return
+        }
+      } else {
         const headerResponse = response.HEADER[0]
         const itemResponse = response.ITEM
         console.log("headerResponse", headerResponse, "itemResponse", itemResponse)
@@ -318,55 +321,64 @@ export default function ChangeEntry() {
       HEADER: [headerData],
       ITEM: items, // 👈 FULL ORIGINAL STRUCTURE
     };
-    console.log("payload", payload)
-    const response = await service.fetchGateEntryChange(payload);
-    console.log("response", response)
-    // 🔴 Collect errors
-    const errorMessages = response
-      .filter(r => r.MSG_TYPE === "E")
-      .map(r => `• ${r.MSG}`);
+    setIsLoading(true);
+    try {
+      console.log("payload", payload)
+      const response = await service.fetchGateEntryChange(payload);
+      console.log("response", response)
+      // 🔴 Collect errors
+      const errorMessages = response
+        .filter(r => r.MSG_TYPE === "E")
+        .map(r => `• ${r.MSG}`);
 
-    // 🟡 Collect warnings
-    const warningMessages = response
-      .filter(r => r.MSG_TYPE === "I")
-      .map(r => `• ${r.MSG}`);
+      // 🟡 Collect warnings
+      const warningMessages = response
+        .filter(r => r.MSG_TYPE === "I")
+        .map(r => `• ${r.MSG}`);
 
-    // 🟢 Success message
-    const successMsg = response.find(r => r.MSG_TYPE === "S");
+      // 🟢 Success message
+      const successMsg = response.find(r => r.MSG_TYPE === "S");
 
-    // ❌ If errors exist → show all errors
-    if (errorMessages.length > 0) {
-      Swal.fire({
-        title: "Error",
-        html: errorMessages.join("<br>"),
-        icon: "error",
-        confirmButtonColor: "#d33",
-      });
-      return;
+      // ❌ If errors exist → show all errors
+      if (errorMessages.length > 0) {
+        Swal.fire({
+          title: "Error",
+          html: errorMessages.join("<br>"),
+          icon: "error",
+          confirmButtonColor: "#d33",
+        });
+        return;
+      }
+
+      // ⚠️ If warnings exist
+      if (warningMessages.length > 0) {
+        Swal.fire({
+          title: "Warning",
+          html: warningMessages.join("<br>"),
+          icon: "warning",
+          confirmButtonColor: "#f0ad4e",
+        });
+      }
+
+      // ✅ Success
+      if (successMsg || response[0]?.CODE === "200") {
+        Swal.fire({
+          title: "Success",
+          text: successMsg?.MSG,
+          icon: "success",
+          confirmButtonColor: "#3085d6",
+        });
+
+        // ✅ Reset state after success
+        handleReset();
+      }
+    } catch (error) {
+      toast.error(error)
+
+    } finally {
+      setIsLoading(false);
     }
 
-    // ⚠️ If warnings exist
-    if (warningMessages.length > 0) {
-      Swal.fire({
-        title: "Warning",
-        html: warningMessages.join("<br>"),
-        icon: "warning",
-        confirmButtonColor: "#f0ad4e",
-      });
-    }
-
-    // ✅ Success
-    if (successMsg || response[0]?.CODE === "200") {
-      Swal.fire({
-        title: "Success",
-        text: successMsg?.MSG,
-        icon: "success",
-        confirmButtonColor: "#3085d6",
-      });
-
-      // ✅ Reset state after success
-      handleReset();
-    }
 
   };
 
@@ -515,10 +527,26 @@ export default function ChangeEntry() {
       ),
     },
   ];
+  const FullScreenLoader = () => {
+    // We create the element to be teleported
+    const loaderContent = (
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div className="flex flex-col items-center gap-4 p-6 bg-white/10 rounded-lg border border-white/20">
+          <div className="w-12 h-12 border-4 border-t-blue-500 border-white/20 rounded-full animate-spin" />
+          <p className="text-white font-medium text-lg tracking-wide">
+            Please Wait Loading...
+          </p>
+        </div>
+      </div>
+    );
 
+    // We render it into the body instead of the local component tree
+    return createPortal(loaderContent, document.body);
+  };
 
   return (
     <div className="space-y-6">
+      {isLoading && <FullScreenLoader />}
       <PageHeader
         title="Change Gate Entry"
         subtitle="Modify existing gate entry records"
@@ -530,7 +558,8 @@ export default function ChangeEntry() {
                 <RotateCcw className="w-4 h-4" />
                 Reset
               </Button>
-              <Button onClick={handleSave} className="bg-accent text-accent-foreground hover:bg-accent/90 gap-2">
+              <Button onClick={handleSave} className="bg-accent text-accent-foreground hover:bg-accent/90 gap-2"
+                disabled={isLoading}>
                 <Save className="w-4 h-4" />
                 Save Changes
               </Button>
@@ -624,10 +653,17 @@ export default function ChangeEntry() {
                 value={headerData.VHNO}
                 onChange={(value) => setHeaderData({ ...headerData, VHNO: value })}
               />
-              <TextField
-                label="Vehicle Type"
-                value={headerData.VHCL_TYPE}
 
+              <SelectField
+                label="Vehicle Type"
+                required
+                value={headerData.VHCL_TYPE}
+                onChange={(value) => setHeaderData({ ...headerData, VHCL_TYPE: value })}
+                options={[
+                  { value: 'HIRE', label: 'Hire Vehicle' },
+                  { value: 'OWN', label: 'Own Vehicle' },
+
+                ]}
               />
               {/* <SelectField
                 label="Vehicle Type"
@@ -660,11 +696,11 @@ export default function ChangeEntry() {
                 value={headerData.GR_LR_NUM}
                 onChange={(value) => setHeaderData({ ...headerData, GR_LR_NUM: value })}
               />
-              <TextField
-                label="Address"
-                value={headerData.TRADDR}
-                onChange={(value) => setHeaderData({ ...headerData, TRADDR: value })}
-              />
+              
+              <TextField label="Inwarded By"
+               value={headerData.INWARDED_BY} 
+               onChange={(value) => setHeaderData({ ...headerData, INWARDED_BY: value })}
+               />
               <TextField
                 label="Remarks"
                 value={headerData.REMARKS}
@@ -679,7 +715,7 @@ export default function ChangeEntry() {
               <TextField label="PO Number" value={headerData.PONO} />
               <TextField label="Vendor Number" value={headerData.VENDOR} />
               <TextField label="Vendor Name" value={headerData.VNAME} />
-              <TextField label="Inwarded By" value={headerData.INWARDED_BY} />
+              
             </div>
           </FormSection>
 

@@ -11,6 +11,7 @@ import Swal from "sweetalert2";
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { packingConditionOptions } from '@/lib/exportToExcel';
+import { createPortal } from 'react-dom';
 
 interface ItemRow {
   "GENO": string,
@@ -96,7 +97,7 @@ export default function DisplayEntry() {
       toast.error('Please enter Gate Entry Number');
       return;
     }
-
+setIsLoading(true);
     try {
       const payload = {
         "GET_ENTRY": gateEntryNo,
@@ -145,7 +146,7 @@ export default function DisplayEntry() {
       setTimeout(() => {
         setHeaderData({
           plant: headerResponse.WERKS,
-          gateEntryType: 'Inward - PO Reference',
+          gateEntryType: headerResponse.WERKS,
           vehicleDate: headerResponse.VHDAT_IN,
           vehicleTime: headerResponse.VHTIM_IN,
           vehicleNo: headerResponse.VHNO,
@@ -168,7 +169,7 @@ export default function DisplayEntry() {
         setItems(itemResponse);
         console.log("itemResponse", itemResponse)
         setIsLoaded(true);
-        setIsLoading(false);
+     
         toast.success('Data Fetched successfully');
       }, 1000);
       }
@@ -271,9 +272,26 @@ export default function DisplayEntry() {
       ),
     },
   ];
+  const FullScreenLoader = () => {
+      // We create the element to be teleported
+      const loaderContent = (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-4 p-6 bg-white/10 rounded-lg border border-white/20">
+            <div className="w-12 h-12 border-4 border-t-blue-500 border-white/20 rounded-full animate-spin" />
+            <p className="text-white font-medium text-lg tracking-wide">
+              Please Wait Loading...
+            </p>
+          </div>
+        </div>
+      );
+  
+      // We render it into the body instead of the local component tree
+      return createPortal(loaderContent, document.body);
+    };
 
   return (
     <div className="space-y-6">
+      {isLoading && <FullScreenLoader />}
       <PageHeader
         title="Display Gate Entry"
         subtitle="View gate entry details (read-only)"
@@ -299,9 +317,11 @@ export default function DisplayEntry() {
             required
           />
           <div className="flex items-end">
-            <Button onClick={handleFetch} disabled={isLoading} className="gap-2 w-full">
+            <Button onClick={handleFetch} disabled={isLoading} className="gap-2 w-full"
+            >
               {isLoading ? (
-                <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin"
+                 />
               ) : (
                 <Search className="w-4 h-4" />
               )}
