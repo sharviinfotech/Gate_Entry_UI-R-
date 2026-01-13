@@ -25,7 +25,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import reslLogo from '@/assets/resl-logo.png';
 import { useAuth } from '@/contexts/AuthContext'; // Import the Auth hook
-
+import { useTheme } from '@/contexts/ThemeContext';
 interface SubNavItem {
   label: string;
   path: string;
@@ -84,7 +84,7 @@ export function AppSidebar({ isOpen, onToggle, isCollapsed, onCollapse }: AppSid
   const navigate = useNavigate();
   const { activities, signOut } = useAuth(); // 2. Get permissions from context
   const [openGroups, setOpenGroups] = useState<string[]>([]);
-
+const { currentTheme } = useTheme();
   const handleLogout = () => {
     signOut();
     navigate('/auth');
@@ -136,8 +136,8 @@ export function AppSidebar({ isOpen, onToggle, isCollapsed, onCollapse }: AppSid
                   setOpenGroups(prev => prev.includes(item.label) ? prev : [...prev, item.label]);
                 }}
                 className={`flex items-center justify-center w-9 h-9 rounded-lg transition-all mx-auto
-                  ${isActive ? 'bg-sidebar-primary text-sidebar-primary-foreground' : 'text-sidebar-foreground/60 hover:bg-sidebar-accent/50'}`}
-              >
+                  ${isActive ? 'bg-sidebar-accent/50 text-sidebar-primary-foreground' : 'text-sidebar-foreground/60 hover:bg-sidebar-accent/50'}`}
+                >
                 <Icon className="w-[18px] h-[18px]" />
               </button>
             ) : (
@@ -145,7 +145,7 @@ export function AppSidebar({ isOpen, onToggle, isCollapsed, onCollapse }: AppSid
                 to={item.path!}
                 className={({ isActive }) => 
                   `flex items-center justify-center w-9 h-9 rounded-lg transition-all mx-auto
-                  ${isActive ? 'bg-sidebar-primary text-sidebar-primary-foreground' : 'text-sidebar-foreground/60 hover:bg-sidebar-accent/50'}`
+                  ${isActive ? 'bg-sidebar-accent/50 text-sidebar-primary-foreground' : 'text-sidebar-foreground/60 hover:bg-sidebar-accent/50'}`
                 }
               >
                 <Icon className="w-[18px] h-[18px]" />
@@ -177,7 +177,7 @@ export function AppSidebar({ isOpen, onToggle, isCollapsed, onCollapse }: AppSid
                 to={subItem.path}
                 className={({ isActive }) => 
                   `flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all
-                  ${isActive ? 'bg-sidebar-primary text-sidebar-primary-foreground' : 'text-sidebar-foreground/60 hover:bg-sidebar-accent/30'}`
+                  ${isActive ? 'bg-sidebar-accent/50 text-sidebar-primary-foreground' : 'text-sidebar-foreground/60 hover:bg-sidebar-accent/30'}`
                 }
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-current opacity-50" />
@@ -195,7 +195,7 @@ export function AppSidebar({ isOpen, onToggle, isCollapsed, onCollapse }: AppSid
         to={item.path!}
         className={({ isActive }) => 
           `flex items-center gap-3 px-4 py-2 rounded-lg transition-all
-          ${isActive ? 'bg-sidebar-primary text-sidebar-primary-foreground' : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/30'}`
+          ${isActive ? 'bg-sidebar-accent/50 text-sidebar-primary-foreground' : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/30'}`
         }
       >
         <Icon className="w-[18px] h-[18px]" />
@@ -208,7 +208,8 @@ export function AppSidebar({ isOpen, onToggle, isCollapsed, onCollapse }: AppSid
     <TooltipProvider delayDuration={0}>
       <>
         {isOpen && <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden" onClick={onToggle} />}
-        <aside className={`fixed lg:sticky inset-y-0 left-0 top-0 z-50 ${isCollapsed ? 'w-[72px]' : 'w-[260px]'} h-screen bg-sidebar flex flex-col transform transition-all duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+        <aside style={{ background: currentTheme.gradient }}
+          className={`fixed lg:sticky inset-y-0 left-0 top-0 z-50 ${isCollapsed ? 'w-[72px]' : 'w-[260px]'} h-screen flex flex-col transform transition-all duration-300 text-white shadow-2xl ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
           <div className={`h-16 flex items-center border-b border-sidebar-border/20 ${isCollapsed ? 'justify-center px-3' : 'justify-between px-4'}`}>
             {!isCollapsed && (
               <div className="flex items-center gap-3">

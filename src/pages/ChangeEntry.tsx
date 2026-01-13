@@ -11,6 +11,8 @@ import { toast } from 'sonner';
 import { packingConditionOptions } from '@/lib/exportToExcel';
 import service from "../services/generalservice.js"
 import Swal from "sweetalert2";
+import { Trash2, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 import { createPortal } from 'react-dom';
 
@@ -68,7 +70,9 @@ export default function ChangeEntry() {
   const [gateEntryNo, setGateEntryNo] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
-
+  const [currentPage, setCurrentPage] = useState(1);
+  const [refDocType, setRefDocType] = useState<string>("");
+   const { webUser } = useAuth();
   const [headerData, setHeaderData] = useState({
     WERKS: '',
     DTYPE: '',
@@ -139,13 +143,23 @@ export default function ChangeEntry() {
   });
 
   const [items, setItems] = useState<ItemRow[]>([]);
-
+  const ITEMS_PER_PAGE = 10;
   const handleFetch = async () => {
     if (!gateEntryNo) {
       toast.error('Please enter Gate Entry Number');
       return;
     }
-  setIsLoading(true);
+    console.log("gateEntryNo", gateEntryNo)
+    if (gateEntryNo.length !== 10) {
+       Swal.fire({
+            title: "warning",
+            text:"Gate Entry Number Should be 10 Digits Only",
+            icon: "warning",
+            confirmButtonColor: "#f0ad4e",
+          });
+      return;
+    }
+    setIsLoading(true);
     try {
       const payload = {
         "GET_ENTRY": gateEntryNo,
@@ -153,6 +167,7 @@ export default function ChangeEntry() {
         "DISPLAY": ""
       }
       setIsLoading(true);
+      resetTable()
       const response = await service.fetchGateEntryChange(payload);
       console.log("response", response)
       if (response.length > 0) {
@@ -202,9 +217,19 @@ export default function ChangeEntry() {
         const headerResponse = response.HEADER[0]
         const itemResponse = response.ITEM
         console.log("headerResponse", headerResponse, "itemResponse", itemResponse)
-
+        // Set the visibility state: true if it's a PO, false otherwise
+        const docType = headerResponse.REFDOCTYP; // e.g., "PO", "SUB", or "WOREF"
+        setRefDocType(docType);
+        console.log("docType", docType)
         // Simulate fetching gate entry data
         setTimeout(() => {
+
+          const itemResponse: ItemRow[] = response.ITEM;
+          setItems(itemResponse);
+          console.log("itemResponse", itemResponse)
+          setIsLoaded(true);
+          setIsLoading(false);
+          toast.success('Data Fetched successfully');
           setHeaderData({
             GENO: headerResponse.GENO,
             WERKS: headerResponse.WERKS,
@@ -218,8 +243,8 @@ export default function ChangeEntry() {
             TRANNAM: headerResponse.TRANNAM,
             GR_LR_NUM: headerResponse.GR_LR_NUM,
             PONO: headerResponse.PONO,
-            VENDOR: headerResponse.VENDOR,
-            VNAME: headerResponse.VNAME,
+            VENDOR: headerResponse.VENDOR || itemResponse[0].CVNO,
+            VNAME: headerResponse.VNAME || itemResponse[0].CVNAME,
             INWARDED_BY: headerResponse.INWARDED_BY,
             REFDOCTYP: headerResponse.REFDOCTYP,
             LEDAT: headerResponse.LEDAT,
@@ -272,13 +297,8 @@ export default function ChangeEntry() {
             "PURPOSE": "",
             "REUSE": ""
           });
-          const itemResponse: ItemRow[] = response.ITEM;
-          setItems(itemResponse);
-          console.log("itemResponse", itemResponse)
-          setIsLoaded(true);
-          setIsLoading(false);
-          toast.success('Data Fetched successfully');
-        }, 1000);
+        }, 0);
+
       }
 
 
@@ -302,16 +322,82 @@ export default function ChangeEntry() {
         i === index ? { ...item, [field]: value } : item
       )
     );
+    console.log("items", items)
   };
 
   const handleDeleteRow = (index: number) => {
     if (items.length > 1) {
       setItems(prev => prev.filter((_, i) => i !== index));
     }
+    console.log("headerData", headerData)
+    console.log("items", items)
+
   };
 
   const handleSave = async () => {
+    var checkFields = []
+    if (headerData.REFDOCTYP === "PO") {
+      checkFields = [
+        { value: headerData.PONO, label: "PO Number" },
+        { value: headerData.WERKS, label: "Plant" },
+        { value: headerData.VHNO, label: "Vehicle No" },
+        { value: headerData.VHCL_TYPE, label: "Vehicle Type" },
+        { value: headerData.VHDAT_IN, label: "Vehicle Date" },
+        { value: headerData.VHTIM_IN, label: "Vehicle Time" },
+        { value: headerData.DRNAM, label: "Driver Name" },
+        { value: headerData.DRNUM, label: "Driver Contact" },
+        { value: headerData.TRANNAM, label: "Transporter Name" },
+      ];
+    } else {
+      // 1. Define the fields and their user-friendly labels
+      checkFields = [
+        { value: headerData.WERKS, label: "Plant" },
+        { value: headerData.VHNO, label: "Vehicle No" },
+        { value: headerData.VHCL_TYPE, label: "Vehicle Type" },
+        { value: headerData.VHDAT_IN, label: "Vehicle Date" },
+        { value: headerData.VHTIM_IN, label: "Vehicle Time" },
+        { value: headerData.DRNAM, label: "Driver Name" },
+        { value: headerData.DRNUM, label: "Driver Contact" },
+        { value: headerData.TRANNAM, label: "Transporter Name" },
+      ];
+    }
+
+
+    // 2. Filter out the fields that are empty
+    const missingFields = checkFields
+      .filter(field => !field.value || field.value.toString().trim() === "")
+      .map(field => field.label);
+
+    // 3. If any are missing, show a detailed alert
+    if (missingFields.length > 0) {
+      Swal.fire({
+        title: "Missing Information",
+        html: `
+                  <div style="text-align: left;">
+                    <p>The following fields are required to save changes:</p>
+                    <ul style="color: #d33; font-weight: 500;">
+                      ${missingFields.map(f => `<li>• ${f}</li>`).join('')}
+                    </ul>
+                  </div>
+                `,
+        icon: "warning",
+        confirmButtonColor: "#f0ad4e",
+      });
+      return;
+    }
+    const selectedItems = items.filter(item => item.CHK === "X");
+
+    if (selectedItems.length === 0) {
+      Swal.fire({
+        title: "Validation Error",
+        text: "Please select at least one item to save.",
+        icon: "warning",
+        confirmButtonColor: "#f0ad4e",
+      });
+      return;
+    }
     toast.success('Gate Entry updated successfully!');
+    headerData.USR_IN = webUser
     const payload = {
       "CREATE": "",
       "CHANGE": "X",
@@ -371,6 +457,7 @@ export default function ChangeEntry() {
 
         // ✅ Reset state after success
         handleReset();
+        resetTable()
       }
     } catch (error) {
       toast.error(error)
@@ -454,79 +541,153 @@ export default function ChangeEntry() {
       "REUSE": ""
     });
     setItems([]);
+    resetTable()
   };
+  const emptyItem: ItemRow = {
+    "GENO": "",
+    "EBELN": null,
+    "ITEM": null,
+    "WTSNO": null,
+    "CHQTY": null,
+    "CHUOM": "",
+    "VGBEL": "",
+    "VGPOS": null,
+    "EXTROW": null,
+    "MATNR": null,
+    "MAKTX": "",
+    "GRWGT": null,
+    "GRDAT": "",
+    "GRTIM": "",
+    "GRUSR": "",
+    "TRWGT": null,
+    "TRDAT": "",
+    "TRTIM": "",
+    "TRUSR": "",
+    "WUNIT": "",
+    "NTWGT": null,
+    "STATUS": "",
+    "INVNO": "",
+    "INVDAT": "",
+    "CVNO": null,
+    "CVNO1": "",
+    "CVNAME": "",
+    "CVNAME1": "",
+    "CVLOC": "",
+    "TRNGRNO": "",
+    "MBLNR": "",
+    "MJAHR": null,
+    "ZEILE": null,
+    "EBELP": null,
+    "VBELN": "",
+    "POSNR": null,
+    "WEPOS": "",
+    "CHARG": "",
+    "CHK": "",
+    "ZQUANT": null,
+    "ZMEINS": "",
+    "ZPACKING": "",
+    "BLQTY": null,
+    "BLUNIT": ""
+  };
+  // const columns = [
+  //   {
+  //     key: 'MATNR',
+  //     header: 'Material Code',
+  //     width: '120px',
+  //   },
+  //   {
+  //     key: 'MAKTX',
+  //     header: 'Material Description',
+  //     width: '200px',
+  //   },
+  //   {
+  //     key: 'CHQTY',
+  //     header: 'PO Qty',
+  //     width: '80px',
+  //   },
+  //   {
+  //     key: 'CHUOM',
+  //     header: 'PO Unit',
+  //     width: '80px',
+  //   },
+  //   {
+  //     key: 'ZQUANT',
+  //     header: 'Gate Entry Qty',
+  //     width: '120px',
+  //     render: (value: number, row: ItemRow, index: number) => (
+  //       <Input
+  //         type="number"
+  //         value={value ?? ''}
+  //         onChange={(e) => {
+  //           const rawValue = e.target.value;
+  //           const numericValue = rawValue === '' ? null : Number(rawValue);
 
-  const columns = [
-    {
-      key: 'MATNR',
-      header: 'Material Code',
-      width: '120px',
-    },
-    {
-      key: 'MAKTX',
-      header: 'Material Description',
-      width: '200px',
-    },
-    {
-      key: 'CHQTY',
-      header: 'PO Qty',
-      width: '80px',
-    },
-    {
-      key: 'CHUOM',
-      header: 'PO Unit',
-      width: '80px',
-    },
-    {
-      key: 'ZQUANT',
-      header: 'Gate Entry Qty',
-      width: '120px',
-      render: (value: number, row: ItemRow, index: number) => (
-        <Input
-          type="number"
-          value={value ?? ''}
-          onChange={(e) => {
-            const rawValue = e.target.value;
-            const numericValue = rawValue === '' ? null : Number(rawValue);
+  //           handleItemChange(index, 'ZQUANT', numericValue);
+  //         }}
+  //         className="h-8 w-full"
+  //         min={0}
+  //       />
+  //     ),
+  //   },
+  //   {
+  //     key: 'ZMEINS',
+  //     header: 'Unit',
+  //     width: '80px',
+  //     render: (value: string, row: ItemRow) => value || row.CHUOM,
+  //   },
+  //   {
+  //     key: 'ZPACKING',
+  //     header: 'Packing Condition',
+  //     width: '150px',
+  //     render: (value: string, _row: ItemRow, index: number) => (
+  //       <Select
+  //         value={value}
+  //         onValueChange={(v) =>
+  //           handleItemChange(index, 'ZPACKING', v)
+  //         }
+  //       >
+  //         <SelectTrigger className="h-8 w-full">
+  //           <SelectValue placeholder="Select" />
+  //         </SelectTrigger>
+  //         <SelectContent>
+  //           {packingConditionOptions.map((opt) => (
+  //             <SelectItem key={opt.value} value={opt.value}>
+  //               {opt.label}
+  //             </SelectItem>
+  //           ))}
+  //         </SelectContent>
+  //       </Select>
+  //     ),
+  //   },
+  // ];
+  const resetTable = () => {
+    setItems(Array(0).fill(null).map(() => ({ ...emptyItem })));
+    handleAddRow()
+  }
 
-            handleItemChange(index, 'ZQUANT', numericValue);
-          }}
-          className="h-8 w-full"
-          min={0}
-        />
-      ),
-    },
-    {
-      key: 'ZMEINS',
-      header: 'Unit',
-      width: '80px',
-      render: (value: string, row: ItemRow) => value || row.CHUOM,
-    },
-    {
-      key: 'ZPACKING',
-      header: 'Packing Condition',
-      width: '150px',
-      render: (value: string, _row: ItemRow, index: number) => (
-        <Select
-          value={value}
-          onValueChange={(v) =>
-            handleItemChange(index, 'ZPACKING', v)
-          }
-        >
-          <SelectTrigger className="h-8 w-full">
-            <SelectValue placeholder="Select" />
-          </SelectTrigger>
-          <SelectContent>
-            {packingConditionOptions.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      ),
-    },
-  ];
+  const handleAddRow = () => {
+    setItems(prev => {
+      // Convert the previous ITEM value to a Number to ensure mathematical addition
+      const lastItemNo = prev.length > 0 ? Number(prev[prev.length - 1].ITEM) : 0;
+      const nextItemNo = lastItemNo + 10;
+
+      const newRow: ItemRow = {
+        ...emptyItem,
+        GENO: headerData.GENO,
+        ITEM: nextItemNo, // This will now be 10, 20, 30...
+        CHK: '',
+      };
+
+      const updated = [...prev, newRow];
+
+      // Move to last page logic
+      const newTotalPages = Math.ceil(updated.length / ITEMS_PER_PAGE);
+      setCurrentPage(newTotalPages);
+
+      return updated;
+    });
+
+  };
   const FullScreenLoader = () => {
     // We create the element to be teleported
     const loaderContent = (
@@ -551,21 +712,21 @@ export default function ChangeEntry() {
         title="Change Gate Entry"
         subtitle="Modify existing gate entry records"
         breadcrumbs={[{ label: 'Change' }]}
-        actions={
-          isLoaded && (
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={handleReset} className="gap-2">
-                <RotateCcw className="w-4 h-4" />
-                Reset
-              </Button>
-              <Button onClick={handleSave} className="bg-accent text-accent-foreground hover:bg-accent/90 gap-2"
-                disabled={isLoading}>
-                <Save className="w-4 h-4" />
-                Save Changes
-              </Button>
-            </div>
-          )
-        }
+      // actions={
+      //   isLoaded && (
+      //     <div className="flex gap-2">
+      //       <Button variant="outline" onClick={handleReset} className="gap-2">
+      //         <RotateCcw className="w-4 h-4" />
+      //         Reset
+      //       </Button>
+      //       <Button onClick={handleSave} className="bg-accent text-accent-foreground hover:bg-accent/90 gap-2"
+      //         disabled={isLoading}>
+      //         <Save className="w-4 h-4" />
+      //         Save Changes
+      //       </Button>
+      //     </div>
+      //   )
+      // }
       />
 
       {/* Gate Entry Reference Section */}
@@ -602,7 +763,9 @@ export default function ChangeEntry() {
           <FormSection title="Header Information">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               {/* <TextField label="Gate Entry No" value={gateEntryNo}  /> */}
-              <TextField label="Plant" value={headerData.WERKS} />
+              <TextField label="Plant"
+                required
+                value={headerData.WERKS} />
               {/* <SelectField
                 label="WERKS"
                 value={headerData.WERKS}
@@ -614,22 +777,34 @@ export default function ChangeEntry() {
                 ]}
               /> */}
               <TextField label="Gate Entry Type" value={headerData.DTYPE}
+                required
+                readOnly
                 onChange={(value) => setHeaderData({ ...headerData, DTYPE: value })} />
+              <TextField
+                required
+                label="Ref Doc Type"
+                readOnly
+                value={headerData.REFDOCTYP}
+
+              />
               <TextField
                 label="Vehicle Date"
                 type="date"
                 value={headerData.VHDAT_IN}
+                required
                 onChange={(value) => setHeaderData({ ...headerData, VHDAT_IN: value })}
               />
               <TextField
                 label="Vehicle Time"
                 type="time"
+                required
                 value={headerData.VHTIM_IN}
                 onChange={(value) => setHeaderData({ ...headerData, VHTIM_IN: value })}
               />
               <TextField
                 label="Vehicle Out Date"
                 type="date"
+
                 value={headerData.LEDAT}
               />
               <TextField
@@ -637,11 +812,7 @@ export default function ChangeEntry() {
                 type="time"
                 value={headerData.LETIM}
               />
-              <TextField
-                label="Ref Doc Type"
-                value={headerData.REFDOCTYP}
 
-              />
             </div>
           </FormSection>
 
@@ -650,6 +821,7 @@ export default function ChangeEntry() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <TextField
                 label="Vehicle No"
+                required
                 value={headerData.VHNO}
                 onChange={(value) => setHeaderData({ ...headerData, VHNO: value })}
               />
@@ -678,16 +850,20 @@ export default function ChangeEntry() {
               /> */}
               <TextField
                 label="Driver Name"
+                required
                 value={headerData.DRNAM}
                 onChange={(value) => setHeaderData({ ...headerData, DRNAM: value })}
               />
               <TextField
                 label="Driver Contact"
+                required
                 value={headerData.DRNUM}
                 onChange={(value) => setHeaderData({ ...headerData, DRNUM: value })}
               />
               <TextField
                 label="Transporter Name"
+                required
+                placeholder="Enter Transporter Name"
                 value={headerData.TRANNAM}
                 onChange={(value) => setHeaderData({ ...headerData, TRANNAM: value })}
               />
@@ -696,11 +872,13 @@ export default function ChangeEntry() {
                 value={headerData.GR_LR_NUM}
                 onChange={(value) => setHeaderData({ ...headerData, GR_LR_NUM: value })}
               />
-              
+
               <TextField label="Inwarded By"
-               value={headerData.INWARDED_BY} 
-               onChange={(value) => setHeaderData({ ...headerData, INWARDED_BY: value })}
-               />
+                required
+                readOnly
+                value={headerData.INWARDED_BY}
+                onChange={(value) => setHeaderData({ ...headerData, INWARDED_BY: value })}
+              />
               <TextField
                 label="Remarks"
                 value={headerData.REMARKS}
@@ -709,28 +887,246 @@ export default function ChangeEntry() {
             </div>
           </FormSection>
 
-          {/* Vendor/Reference Details */}
-          <FormSection title="Reference Details">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <TextField label="PO Number" value={headerData.PONO} />
-              <TextField label="Vendor Number" value={headerData.VENDOR} />
-              <TextField label="Vendor Name" value={headerData.VNAME} />
-              
-            </div>
-          </FormSection>
+          {/* Only show "Reference Details" if NOT in PO Mode */}
+          {/* Only show "Reference Details" if type is exactly PO */}
+          {refDocType === "PO" && (
+            <FormSection title="Reference Details">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <TextField label="PO Number" value={headerData.PONO} />
+                <TextField label="Vendor Number" value={headerData.VENDOR} />
+                <TextField label="Vendor Name" value={headerData.VNAME} />
+              </div>
+            </FormSection>
+          )}
 
           {/* Item Grid */}
-          <FormSection title="Item Details">
-            <DataGrid
-              columns={columns}
-              data={items}
-              editable={true}
-              onRowDelete={handleDeleteRow}
-              minRows={1}
-              maxHeight="350px"
-              itemsPerPage={10}
-            />
+          <FormSection title="Item Details"
+            actions={
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleAddRow}
+                className="gap-2 border-dashed h-8 px-3"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Add New
+              </Button>
+            }>
+            {/* Add Row Button */}
+
+
+            <div className="border rounded-md">
+              <div className="overflow-auto scrollbar-thin" style={{ maxHeight: '400px' }}>
+                <table className="w-full border-collapse text-sm">
+                  <thead className="bg-muted sticky top-0 z-10">
+                    <tr>
+                      <th className="p-2 border w-10">
+                        <input
+                          type="checkbox"
+                          checked={items.length > 0 && items.every(i => i.CHK === 'X')}
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            setItems(prev => prev.map(item => ({ ...item, CHK: checked ? 'X' : '' })));
+                          }}
+                        />
+                      </th>
+                      <th className="w-16 text-center">Item</th>
+                      <th className="p-2 border w-32">Material Code</th>
+                      <th className="p-2 border w-60">Material Description</th>
+                      {/* Logic for Qty/Unit Columns */}
+                      {/* PO Qty & PO Unit → show for PO and SUB */}
+                      {["PO", "SUB"].includes(refDocType) && (
+                        <>
+                          <th className="p-2 border w-24">PO Qty</th>
+                          <th className="p-2 border w-24">PO Unit</th>
+                        </>
+                      )}
+
+                      {/* Quantity → show for PO and others (NOT SUB-only logic) */}
+
+                      {["PO"].includes(refDocType) && (
+                        <>
+                          <th className="p-2 border w-24">Quantity</th>
+
+                        </>
+                      )}
+                      {["WOREF"].includes(refDocType) && (
+                        <>
+                          <th className="p-2 border w-24">Quantity</th>
+                          <th className="p-2 border w-24">Unit</th>
+                        </>
+                      )}
+                      {/* Logic for Vendor Columns: Show for SUB and WOREF */}
+                      {["SUB", "WOREF"].includes(refDocType) && (
+                        <>
+                          <th className="p-2 border w-40">Vendor</th>
+                          <th className="p-2 border w-40">Vendor Name</th>
+                        </>
+                      )}
+                      <th className="p-2 border w-40">Packing Condition</th>
+                      <th className="p-2 border w-16">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map((item, index) => (
+                      <tr key={index} className="hover:bg-muted/50">
+                        {/* Checkbox */}
+                        <td className="p-2 border text-center">
+                          <input
+                            type="checkbox"
+                            checked={item.CHK === 'X'}
+                            onChange={(e) => handleItemChange(index, 'CHK', e.target.checked ? 'X' : '')}
+                          />
+                        </td>
+                        <td>
+                          <Input
+                            value={item.ITEM}
+                            readOnly
+                            className="h-8 text-center bg-muted/50"
+                          />
+                        </td>
+
+                        {/* Material Code */}
+                        <td className="p-2 border">
+                          <Input
+                            value={item.MATNR}
+                            onChange={(e) => handleItemChange(index, 'MATNR', e.target.value)}
+                            className="h-8"
+                            placeholder="Material..."
+                          />
+                        </td>
+
+                        {/* Description */}
+                        <td className="p-2 border">
+                          <Input
+                            value={item.MAKTX}
+                            onChange={(e) => handleItemChange(index, 'MAKTX', e.target.value)}
+                            className="h-8"
+                          />
+                        </td>
+                        {/* PO Qty & PO Unit */}
+                        {["PO", "SUB"].includes(refDocType) && (
+                          <>
+                            <td className="p-2 border">
+                              <Input
+                                type="number"
+                                value={item.CHQTY}
+                                onChange={(e) =>
+                                  handleItemChange(index, 'CHQTY', Number(e.target.value))
+                                }
+                                className="h-8 text-right"
+                              />
+                            </td>
+                            <td className="p-2 border">
+                              <Input
+                                value={item.CHUOM}
+                                onChange={(e) =>
+                                  handleItemChange(index, 'CHUOM', e.target.value)
+                                }
+                                className="h-8"
+                              />
+                            </td>
+                          </>
+                        )}
+
+
+
+                        {/* Quantity & Unit */}
+                        {["PO"].includes(refDocType) && (
+                          <>
+                            <td className="p-2 border">
+                              <Input
+                                type="number"
+                                value={item.ZQUANT}
+                                onChange={(e) =>
+                                  handleItemChange(index, 'ZQUANT', Number(e.target.value))
+                                }
+                                className="h-8 text-right"
+                              />
+                            </td>
+
+                          </>
+                        )}
+                        {["WOREF"].includes(refDocType) && (
+                          <>
+                            <td className="p-2 border">
+                              <Input
+                                type="number"
+                                value={item.ZQUANT}
+                                onChange={(e) =>
+                                  handleItemChange(index, 'ZQUANT', Number(e.target.value))
+                                }
+                                className="h-8 text-right"
+                              />
+                            </td>
+                            <td className="p-2 border">
+                              <Input
+                                value={item.ZMEINS}
+                                onChange={(e) =>
+                                  handleItemChange(index, 'ZMEINS', e.target.value)
+                                }
+                                className="h-8"
+                              />
+                            </td>
+                          </>
+                        )}
+
+                        {/* Vendor Inputs: Show for SUB and WOREF */}
+                        {["SUB", "WOREF"].includes(refDocType) && (
+                          <>
+                            <td className="p-2 border"><Input value={item.CVNO} onChange={(e) => handleItemChange(index, 'CVNO', e.target.value)} className="h-8" /></td>
+                            <td className="p-2 border"><Input value={item.CVNAME} onChange={(e) => handleItemChange(index, 'CVNAME', e.target.value)} className="h-8" /></td>
+                          </>
+                        )}
+
+                        {/* Packing Condition */}
+                        <td className="p-2 border">
+                          <Select
+                            value={item.ZPACKING}
+                            onValueChange={(val) => handleItemChange(index, 'ZPACKING', val)}
+                          >
+                            <SelectTrigger className="h-8">
+                              <SelectValue placeholder="Select" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="GOOD">Good</SelectItem>
+                              <SelectItem value="BAD">BAD</SelectItem>
+                              <SelectItem value="N/A">N/A</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </td>
+
+                        {/* Delete Action */}
+                        <td className="p-2 border text-center">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteRow(index)}
+                            className="h-8 w-8 p-0 text-destructive"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 mt-4 pt-4 border-t">
+              <Button variant="outline" onClick={handleReset} className="gap-2">
+                <RotateCcw className="w-4 h-4" />
+                Reset
+              </Button>
+              <Button onClick={handleSave} className="bg-accent text-accent-foreground hover:bg-accent/90 gap-2"
+                disabled={isLoading}>
+                <Save className="w-4 h-4" />
+                Save Changes
+              </Button>
+            </div>
+
           </FormSection>
+
         </>
       )}
     </div>

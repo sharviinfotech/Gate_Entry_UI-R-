@@ -13,6 +13,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import service from "../../services/generalservice.js";
 import Swal from "sweetalert2";
 import { createPortal } from 'react-dom';
+import { Plus, Trash2 } from 'lucide-react';
+
 interface ItemRow {
   "GENO": string,
   "EBELN": number,
@@ -63,10 +65,10 @@ interface ItemRow {
 
 export default function InwardPOReference() {
   const { webUser } = useAuth();
-
+ const [userPlant, setPlant] = useState('');
   const [headerData, setHeaderData] = useState({
     WERKS: '',
-    DTYPE: 'IN',
+    
     VHDAT_IN: new Date().toISOString().split('T')[0],
     VHTIM_IN: new Date().toTimeString().slice(0, 8),
     VHNO: '',
@@ -79,7 +81,8 @@ export default function InwardPOReference() {
     VENDOR: '',
     VNAME: '',
     INWARDED_BY: '',
-    REFDOCTYP: 'PO',
+    REFDOCTYP: 'Purchase Order',
+    DTYPE: 'Inward Process',
     LEDAT: '',
     LETIM: '',
     TRADDR: '',
@@ -130,11 +133,18 @@ export default function InwardPOReference() {
     "PEND_AMOUNT": "",
     "BLNO": "",
     "PURPOSE": "",
-    "REUSE": ""
+    "REUSE": "",
+    CVNO: "",
+    CVNAME: ''
   });
 
   useEffect(() => {
-    setHeaderData(prev => ({ ...prev, INWARDED_BY: webUser }));
+      const loggedInDetails = localStorage.getItem('gate_entry_user');
+    
+    const SelectedPlant = localStorage.getItem('SelectedPlant');
+    console.log("SelectedPlant",SelectedPlant)
+    headerData.WERKS =SelectedPlant
+    setHeaderData(prev => ({ ...prev, INWARDED_BY: webUser}));
   }, [webUser]);
 
   const [items, setItems] = useState<ItemRow[]>([]);
@@ -309,14 +319,15 @@ export default function InwardPOReference() {
 
           setHeaderData(prev => ({
             ...prev,
-            VENDOR: itemResponse?.[0]?.CVNO1 || '',
-            VNAME: itemResponse?.[0]?.CVNAME1 || '',
+            // Use String() if CVNO might be a number but VENDOR expects a string
+            VENDOR: itemResponse?.[0]?.CVNO ? String(itemResponse[0].CVNO) : '',
+            VNAME: itemResponse?.[0]?.CVNAME || '',
           }));
           // Simulate fetching gate entry data
           setTimeout(() => {
             setIsLoading(false);
             toast.success('Data Fetched successfully');
-          }, 1000);
+          }, 0);
         }
 
         // ✅ Reset state after success
@@ -347,6 +358,41 @@ export default function InwardPOReference() {
   };
 
   const handleSave = async () => {
+    // 1. Define the fields and their user-friendly labels
+    const checkFields = [
+      { value: headerData.PONO, label: "PO Number" },
+      { value: headerData.WERKS, label: "Plant" },
+      { value: headerData.VHNO, label: "Vehicle No" },
+      { value: headerData.VHCL_TYPE, label: "Vehicle Type" },
+      { value: headerData.VHDAT_IN, label: "Vehicle Date" },
+      { value: headerData.VHTIM_IN, label: "Vehicle Time" },
+      { value: headerData.DRNAM, label: "Driver Name" },
+      { value: headerData.DRNUM, label: "Driver Contact" },
+      { value: headerData.TRANNAM, label: "Transporter Name" },
+    ];
+
+    // 2. Filter out the fields that are empty
+    const missingFields = checkFields
+      .filter(field => !field.value || field.value.toString().trim() === "")
+      .map(field => field.label);
+
+    // 3. If any are missing, show a detailed alert
+    if (missingFields.length > 0) {
+      Swal.fire({
+        title: "Missing Information",
+        html: `
+        <div style="text-align: left;">
+          <p>The following fields are required to save changes:</p>
+          <ul style="color: #d33; font-weight: 500;">
+            ${missingFields.map(f => `<li>• ${f}</li>`).join('')}
+          </ul>
+        </div>
+      `,
+        icon: "warning",
+        confirmButtonColor: "#f0ad4e",
+      });
+      return;
+    }
     const selectedItems = items.filter(item => item.CHK === "X");
 
     if (selectedItems.length === 0) {
@@ -358,6 +404,9 @@ export default function InwardPOReference() {
       });
       return;
     }
+    headerData.REFDOCTYP = "PO"
+    headerData.DTYPE = "IN"
+    headerData.ERNAM = webUser
     const payload = {
       CREATE: "X",
       CHANGE: "",
@@ -438,7 +487,7 @@ export default function InwardPOReference() {
   const handleReset = () => {
     setHeaderData({
       WERKS: '',
-      DTYPE: 'IN',
+      DTYPE: 'Inward Process',
       "VHDAT_IN": new Date().toISOString().split('T')[0], //Vehicle IN Date    //System Generated
       "VHTIM_IN": new Date().toTimeString().slice(0, 5), //Vehicle IN time  
       VHNO: '',
@@ -451,7 +500,7 @@ export default function InwardPOReference() {
       VENDOR: '',
       VNAME: '',
       INWARDED_BY: '',
-      REFDOCTYP: 'PO',
+      REFDOCTYP: 'Purchase Order',
       LEDAT: '',
       LETIM: '',
       TRADDR: '',
@@ -501,7 +550,9 @@ export default function InwardPOReference() {
       PEND_AMOUNT: '',
       BLNO: '',
       PURPOSE: '',
-      REUSE: ''
+      REUSE: '',
+      CVNO: '',
+      CVNAME: ''
     });
 
     setItems([]);
@@ -528,108 +579,132 @@ export default function InwardPOReference() {
   //   toast.success('Exported to Excel successfully');
   // };
 
-  const columns = [
-    {
-      key: 'CHK',
-      header: '',
-      width: '50px',
-      render: (_value: string, _row: ItemRow, index: number) => (
-        <input
-          type="checkbox"
-          checked={items[index]?.CHK === 'X'}
-          onChange={(e) =>
-            handleItemChange(index, 'CHK', e.target.checked ? 'X' : '')
-          }
-        />
-      ),
-    },
-    {
-      key: 'MATNR',
-      header: 'Material Code',
-      width: '120px',
-    },
-    {
-      key: 'MAKTX',
-      header: 'Material Description',
-      width: '200px',
-    },
-    {
-      key: 'CHQTY',
-      header: 'PO Qty',
-      width: '80px',
-    },
-    {
-      key: 'CHUOM',
-      header: 'PO Unit',
-      width: '80px',
-    },
-    {
-      key: 'ZQUANT',
-      header: 'Gate Entry Qty',
-      width: '120px',
-      render: (value: number, row: ItemRow, index: number) => (
-        <Input
-          type="number"
-          value={value ?? ''}
-          onChange={(e) => {
-            const rawValue = e.target.value;
-            const numericValue = rawValue === '' ? null : Number(rawValue);
+  // const columns = [
+  //   {
+  //     key: 'CHK',
+  //     // Custom Header: Includes a "Select All" checkbox and the label "Items"
+  //     header: (
+  //       <div className="flex items-center gap-4">
+  //         <input
+  //           type="checkbox"
+  //           className="w-4 h-4 cursor-pointer"
+  //           checked={items.length > 0 && items.every(i => i.CHK === 'X')}
+  //           onChange={(e) => {
+  //             const checked = e.target.checked;
+  //             // setItems logic here to select/deselect all
+  //             setItems(prev => prev.map(item => ({ ...item, CHK: checked ? 'X' : '' })));
+  //           }}
+  //         />
+  //         <span>Items</span>
+  //       </div>
+  //     ),
+  //     width: '140px',
+  //     render: (_value: string, row: ItemRow, index: number) => (
+  //       <div className="flex items-center gap-4">
+  //         {/* Row Checkbox */}
+  //         <input
+  //           type="checkbox"
+  //           checked={items[index]?.CHK === 'X'}
+  //           onChange={(e) =>
+  //             handleItemChange(index, 'CHK', e.target.checked ? 'X' : '')
+  //           }
+  //           className="w-4 h-4 cursor-pointer"
+  //         />
 
-            handleItemChange(index, 'ZQUANT', numericValue);
-          }}
-          className="h-8 w-full"
-          min={0}
-        />
-      ),
-    },
+  //         {/* Formatted Item Number in a styled box like your screenshot */}
+  //         <div className="flex items-center justify-center h-8 px-2 border rounded bg-muted/30 min-w-[60px] text-sm text-muted-foreground">
+  //           {row.ITEM ? row.ITEM.toString().padStart(5, '0') : (index + 1).toString().padStart(5, '0')}
+  //         </div>
+  //       </div>
+  //     ),
+  //   },
+  //   {
+  //     key: 'MATNR',
+  //     header: 'Material Code',
+  //     width: '120px',
+  //   },
+  //   {
+  //     key: 'MAKTX',
+  //     header: 'Material Description',
+  //     width: '200px',
+  //   },
+  //   {
+  //     key: 'CHQTY',
+  //     header: 'PO Qty',
+  //     width: '80px',
+  //   },
+  //   {
+  //     key: 'CHUOM',
+  //     header: 'PO Unit',
+  //     width: '80px',
+  //   },
+  //   {
+  //     key: 'ZQUANT',
+  //     header: 'Gate Entry Qty',
+  //     width: '120px',
+  //     render: (value: number, row: ItemRow, index: number) => (
+  //       <Input
+  //         type="number"
+  //         value={value ?? ''}
+  //         onChange={(e) => {
+  //           const rawValue = e.target.value;
+  //           const numericValue = rawValue === '' ? null : Number(rawValue);
 
-    {
-      key: 'ZPACKING',
-      header: 'Packing Condition',
-      width: '150px',
-      render: (value: string, _row: ItemRow, index: number) => (
-        <Select
-          value={value}
-          onValueChange={(v) =>
-            handleItemChange(index, 'ZPACKING', v)
-          }
-        >
-          <SelectTrigger className="h-8 w-full">
-            <SelectValue placeholder="Select" />
-          </SelectTrigger>
-          <SelectContent>
-            {packingConditionOptions.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      ),
-    },
-  ];
+  //           handleItemChange(index, 'ZQUANT', numericValue);
+  //         }}
+  //         className="h-8 w-full"
+  //         min={0}
+  //       />
+  //     ),
+  //   },
+
+  //   {
+  //     key: 'ZPACKING',
+  //     header: 'Packing Condition',
+  //     width: '150px',
+  //     render: (value: string, _row: ItemRow, index: number) => (
+  //       <Select
+  //         value={value}
+  //         onValueChange={(v) =>
+  //           handleItemChange(index, 'ZPACKING', v)
+  //         }
+  //       >
+  //         <SelectTrigger className="h-8 w-full">
+  //           <SelectValue placeholder="Select" />
+  //         </SelectTrigger>
+  //         <SelectContent>
+  //           {packingConditionOptions.map((opt) => (
+  //             <SelectItem key={opt.value} value={opt.value}>
+  //               {opt.label}
+  //             </SelectItem>
+  //           ))}
+  //         </SelectContent>
+  //       </Select>
+  //     ),
+  //   },
+  // ];
 
 
-const FullScreenLoader = () => {
-  // We create the element to be teleported
-  const loaderContent = (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="flex flex-col items-center gap-4 p-6 bg-white/10 rounded-lg border border-white/20">
-        <div className="w-12 h-12 border-4 border-t-blue-500 border-white/20 rounded-full animate-spin" />
-        <p className="text-white font-medium text-lg tracking-wide">
-          Please Wait Loading...
-        </p>
+  const FullScreenLoader = () => {
+    // We create the element to be teleported
+    const loaderContent = (
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div className="flex flex-col items-center gap-4 p-6 bg-white/10 rounded-lg border border-white/20">
+          <div className="w-12 h-12 border-4 border-t-blue-500 border-white/20 rounded-full animate-spin" />
+          <p className="text-white font-medium text-lg tracking-wide">
+            Please Wait Loading...
+          </p>
+        </div>
       </div>
-    </div>
-  );
+    );
 
-  // We render it into the body instead of the local component tree
-  return createPortal(loaderContent, document.body);
-};
+    // We render it into the body instead of the local component tree
+    return createPortal(loaderContent, document.body);
+  };
 
   return (
 
-    
+
     <div className="space-y-6">
       <PageHeader
         title="Inward Gate Entry - PO Reference"
@@ -642,9 +717,10 @@ const FullScreenLoader = () => {
         <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
           <TextField
             label="Plant"
+            readOnly
             value={headerData.WERKS}
             onChange={(value) => setHeaderData({ ...headerData, WERKS: value })}
-            placeholder="Enter PO Number"
+            placeholder="Enter Plant"
             required
           />
           {/* <SelectField
@@ -760,23 +836,33 @@ const FullScreenLoader = () => {
           />
           <TextField
             label="Driver Name"
+            required
             value={headerData.DRNAM}
             onChange={(value) => setHeaderData({ ...headerData, DRNAM: value })}
             placeholder="Enter driver name"
           />
           <TextField
             label="Driver Contact"
+            required
             value={headerData.DRNUM}
             onChange={(value) => setHeaderData({ ...headerData, DRNUM: value })}
             placeholder="+91 98765 43210"
           />
-          <SelectField
+
+            <TextField
+            label="Transporter Name"
+            required
+            placeholder="Enter Transporter Name"
+            value={headerData.TRANNAM}
+            onChange={(value) => setHeaderData({ ...headerData, TRANNAM: value })}
+          />
+          {/* <SelectField
             label="Transporter Name"
             required
             value={headerData.TRANNAM}
             onChange={(value) => setHeaderData({ ...headerData, TRANNAM: value })}
             options={transporterOptions}
-          />
+          /> */}
           <TextField
             label="GR/LR Number"
             value={headerData.GR_LR_NUM}
@@ -813,7 +899,7 @@ const FullScreenLoader = () => {
                 Export to Excel
               </Button>
             </div> */}
-            <DataGrid
+            {/* <DataGrid
               columns={columns}
               data={items}
               // editable={true}
@@ -821,7 +907,112 @@ const FullScreenLoader = () => {
               minRows={1}
               maxHeight="350px"
               itemsPerPage={10}
-            />
+            /> */}
+
+            <div className="data-grid border rounded-md">
+              <div className="overflow-auto scrollbar-thin" style={{ maxHeight: '400px' }}>
+                <table className="w-full border-collapse text-sm">
+                  <thead className="bg-muted sticky top-0 z-10">
+                    <tr>
+                      {/* Combined Checkbox and Items Label */}
+                      <th className="p-2 border w-[140px] text-left">
+                        <div className="flex items-center gap-4">
+                          <input
+                            type="checkbox"
+                            className="w-4 h-4 cursor-pointer"
+                            checked={items.length > 0 && items.every(i => i.CHK === 'X')}
+                            onChange={(e) => {
+                              const checked = e.target.checked;
+                              setItems(prev => prev.map(item => ({ ...item, CHK: checked ? 'X' : '' })));
+                            }}
+                          />
+                          <span>Items</span>
+                        </div>
+                      </th>
+
+                      <th className="p-2 border w-32 text-left">Material Code</th>
+                      <th className="p-2 border w-60 text-left">Material Description</th>
+                      <th className="p-2 border w-24 text-left">PO Qty</th>
+                      <th className="p-2 border w-24 text-left">PO Unit</th>
+                      <th className="p-2 border w-32 text-left">Gate Entry Qty</th>
+                      <th className="p-2 border w-40 text-left">Packing Condition</th>
+                      <th className="p-2 border w-16 text-center">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map((item, index) => (
+                      <tr key={index} className="hover:bg-muted/50 transition-colors">
+                        {/* Item Column: Checkbox + Styled Item No */}
+                        <td className="p-2 border">
+                          <div className="flex items-center gap-4">
+                            <input
+                              type="checkbox"
+                              checked={item.CHK === 'X'}
+                              onChange={(e) => handleItemChange(index, 'CHK', e.target.checked ? 'X' : '')}
+                              className="w-4 h-4 cursor-pointer"
+                            />
+                            <div className="flex items-center justify-center h-8 px-2 border rounded bg-muted/30 min-w-[60px] text-xs font-medium text-muted-foreground">
+                              {String(item.ITEM).padStart(5, '0')}
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Material Details (Read-only or Input based on your need) */}
+                        <td className="p-2 border">{item.MATNR}</td>
+                        <td className="p-2 border">{item.MAKTX}</td>
+                        <td className="p-2 border text-right">{item.CHQTY}</td>
+                        <td className="p-2 border">{item.CHUOM}</td>
+
+                        {/* Editable Gate Entry Quantity */}
+                        <td className="p-2 border">
+                          <Input
+                            type="number"
+                            value={item.ZQUANT ?? ''}
+                            onChange={(e) => {
+                              const val = e.target.value === '' ? null : Number(e.target.value);
+                              handleItemChange(index, 'ZQUANT', val);
+                            }}
+                            className="h-8 text-right"
+                          />
+                        </td>
+
+                        {/* Packing Condition Select */}
+                        <td className="p-2 border">
+                          <Select
+                            value={item.ZPACKING}
+                            onValueChange={(v) => handleItemChange(index, 'ZPACKING', v)}
+                          >
+                            <SelectTrigger className="h-8 w-full">
+                              <SelectValue placeholder="Select" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {packingConditionOptions.map((opt) => (
+                                <SelectItem key={opt.value} value={opt.value}>
+                                  {opt.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </td>
+
+                        {/* Delete Action */}
+                        <td className="p-2 border text-center">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteRow(index)}
+                            className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
             <div className="flex justify-end gap-2 mt-4 pt-4 border-t">
               <Button variant="outline" onClick={handleReset} className="gap-2" disabled={isLoading}>
                 <RotateCcw className="w-4 h-4" />
@@ -853,5 +1044,5 @@ const FullScreenLoader = () => {
     </div>
   );
 
-  
+
 }

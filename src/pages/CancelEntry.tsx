@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import service from "../services/generalservice.js"
 import Swal from "sweetalert2";
+import { useAuth } from '@/contexts/AuthContext';
 export default function CancelEntry() {
   const getTodayDate = () => new Date().toISOString().split('T')[0]; // YYYY-MM-DD
   const getCurrentTime = () => new Date().toTimeString().slice(0, 8); // HH:mm:ss
@@ -17,6 +18,8 @@ export default function CancelEntry() {
   const [cancelReason, setCancelReason] = useState('');
   const [confirmed, setConfirmed] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
+  const { webUser } = useAuth();
+
   const [headerData, setHeaderData] = useState({
     GENO: '',
     WERKS: '',
@@ -33,7 +36,15 @@ export default function CancelEntry() {
       toast.error('Enter Gate Entry No');
       return;
     }
-
+if (gateEntryNo.length !== 10) {
+           Swal.fire({
+                title: "warning",
+                text:"Gate Entry Number Should be 10 Digits Only",
+                icon: "warning",
+                confirmButtonColor: "#f0ad4e",
+              });
+          return;
+        }
     try {
       const payload = {
         EXIT_GE: gateEntryNo,
@@ -57,7 +68,7 @@ export default function CancelEntry() {
             icon: "success",
             confirmButtonColor: "#3085d6",
           });
-           setHeaderData({
+          setHeaderData({
             GENO: '',
             WERKS: '',
             VHDAT_IN: '',
@@ -116,6 +127,8 @@ export default function CancelEntry() {
 
 
   const handleCancel = async () => {
+
+
     if (!cancelReason || !confirmed) {
       toast.error('Complete all fields');
       return;
@@ -140,7 +153,7 @@ export default function CancelEntry() {
         LETIM: "",
         SGTXT: "",
         INWARDED_BY: headerData.INWARDED_BY,
-
+        LCUSR: webUser,
         // Flags
         GECAN: "X",
         GEEXT: ""

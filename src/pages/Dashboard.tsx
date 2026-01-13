@@ -160,7 +160,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const currentHour = new Date().getHours();
   const greeting = currentHour < 12 ? 'Good Morning' : currentHour < 17 ? 'Good Afternoon' : 'Good Evening';
-  const userName = 'WebUser';
+  const [userName, setUserName] = useState('');
 
   const [themeIndex, setThemeIndex] = useState(0);
   const [hoveredModule, setHoveredModule] = useState<string | null>(null);
@@ -185,7 +185,21 @@ export default function Dashboard() {
   }, [navigate]);
 
   useEffect(() => {
+    const loggedInDetails = localStorage.getItem('gate_entry_user');
+    console.log('loggedInDetails', loggedInDetails);
+
+    if (loggedInDetails) {
+      try {
+        const userObj = JSON.parse(loggedInDetails);
+        // 2. Use the setter function to update the state
+        const fullName = `${userObj.FIRST_NAME || ''} ${userObj.LAST_NAME || ''}`;
+        setUserName(fullName);
+      } catch (error) {
+        console.error("Error parsing user details:", error);
+      }
+    }
     window.addEventListener('keydown', handleKeyPress);
+
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [handleKeyPress]);
 

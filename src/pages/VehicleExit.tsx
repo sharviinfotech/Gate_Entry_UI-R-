@@ -10,6 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import service from "../services/generalservice.js"
 import Swal from "sweetalert2";
+import { useAuth } from '@/contexts/AuthContext';
 
 import { createPortal } from 'react-dom';
 
@@ -18,6 +19,7 @@ export default function VehicleExit() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [exitConfirmed, setExitConfirmed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+   const { webUser } = useAuth();
 
   // Gate Entry Header (read-only, fetched from system)
   const [headerData, setHeaderData] = useState({
@@ -42,6 +44,15 @@ export default function VehicleExit() {
       toast.error('Enter Gate Entry No');
       return;
     }
+    if (gateEntryNo.length !== 10) {
+               Swal.fire({
+                    title: "warning",
+                    text:"Gate Entry Number Should be 10 Digits Only",
+                    icon: "warning",
+                    confirmButtonColor: "#f0ad4e",
+                  });
+              return;
+            }
 setIsLoading(true);
     try {
       const payload = {
@@ -156,6 +167,7 @@ setIsLoading(true);
           "SGTXT": exitData.SGTXT, //exit
           "INWARDED_BY": headerData.GENO, //exit
           "GECAN": "",   //Cancel check
+          "LEUSR":webUser,
           "GEEXT": "X" //exit check
         }
       }

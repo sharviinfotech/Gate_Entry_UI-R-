@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode,useMemo } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useMemo } from 'react';
 import Swal from "sweetalert2";
 // Define the structure based on your API response
 interface Plant {
@@ -37,7 +37,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
-const [selectedPlant, setSelectedPlant] = useState<string>("");
+  const [selectedPlant, setSelectedPlant] = useState<string>("");
   const [selectedRole, setSelectedRole] = useState<string>("");
   useEffect(() => {
     // Check if user is already logged in via localStorage
@@ -47,14 +47,14 @@ const [selectedPlant, setSelectedPlant] = useState<string>("");
     }
     setLoading(false);
   }, []);
-// Initialize defaults when user logs in
+  // Initialize defaults when user logs in
   useEffect(() => {
-    
+
     const savedUser = localStorage.getItem('gate_entry_user');
     if (savedUser) {
       const parsed = JSON.parse(savedUser);
       setUser(parsed);
-      
+
       // Auto-select first plant and its first role
       if (parsed.PLANTS?.length > 0) {
         const firstPlant = parsed.PLANTS[0];
@@ -62,6 +62,7 @@ const [selectedPlant, setSelectedPlant] = useState<string>("");
         if (firstPlant.ROLES?.length > 0) {
           setSelectedRole(firstPlant.ROLES[0].ROLE);
         }
+        console.log("firstPlant",firstPlant)
       }
     }
     setLoading(false);
@@ -87,34 +88,37 @@ const [selectedPlant, setSelectedPlant] = useState<string>("");
       });
 
       const data = await response.json();
-      console.log("response",response,data)
+      console.log("response", response, data)
 
       if (response.ok && data.USER) {
         localStorage.setItem('gate_entry_user', JSON.stringify(data));
         setUser(data);
+         localStorage.setItem('SelectedPlant', '');
         // FORCE SELECTION TO INDEX 0 ON LOGIN
-      if (data.PLANTS && data.PLANTS.length > 0) {
-        const firstPlant = data.PLANTS[0];
-        setSelectedPlant(String(firstPlant.PLANT)); // Force index 0
+        if (data.PLANTS && data.PLANTS.length > 0) {
+          const firstPlant = data.PLANTS[0];
+          setSelectedPlant(String(firstPlant.PLANT)); // Force index 0
 
-        if (firstPlant.ROLES && firstPlant.ROLES.length > 0) {
-          setSelectedRole(firstPlant.ROLES[0].ROLE); // Force index 0
-        } else {
-          setSelectedRole("");
+          if (firstPlant.ROLES && firstPlant.ROLES.length > 0) {
+            setSelectedRole(firstPlant.ROLES[0].ROLE); // Force index 0
+          } else {
+            setSelectedRole("");
+          }
+          console.log("firstPlant",firstPlant)
         }
-      }
+        
 
-      return { error: null };
+        return { error: null };
         return { error: null };
       } else {
-          Swal.fire({
-                    title: "Error",
-                    text: data.MESSAGE,
-                    icon: "error",
-                    confirmButtonColor: "#d33",
-                  });
+        Swal.fire({
+          title: "Error",
+          text: data.MESSAGE,
+          icon: "error",
+          confirmButtonColor: "#d33",
+        });
         return
-         { error: { message: data.MESSAGE || 'Invalid Credentials' } };
+        { error: { message: data.MESSAGE || 'Invalid Credentials' } };
       }
     } catch (err) {
       return { error: { message: 'Server connection failed' } };
@@ -129,8 +133,10 @@ const [selectedPlant, setSelectedPlant] = useState<string>("");
   const webUser = user ? `${user.FIRST_NAME} ${user.LAST_NAME}` : 'Guest';
 
   return (
-    <AuthContext.Provider value={{ user, selectedPlant, setSelectedPlant, 
-      selectedRole, setSelectedRole, activities,loading, signIn, signOut, webUser }}>
+    <AuthContext.Provider value={{
+      user, selectedPlant, setSelectedPlant,
+      selectedRole, setSelectedRole, activities, loading, signIn, signOut, webUser
+    }}>
       {children}
     </AuthContext.Provider>
   );

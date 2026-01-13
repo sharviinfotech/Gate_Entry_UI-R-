@@ -61,7 +61,11 @@ export function AppHeader({ sidebarTrigger, collapseTrigger }: any) {
         <Select 
           value={selectedPlant}
           onValueChange={(val) => {
+            navigate('/dashboard');
+            localStorage.setItem('SelectedPlant', '');
             setSelectedPlant(val);
+            console.log("val",val)
+            localStorage.setItem('SelectedPlant', val);
             // When plant changes, auto-select the first role of that new plant
             const newPlant = user?.PLANTS.find(p => String(p.PLANT) === val);
             if (newPlant && newPlant.ROLES.length > 0) {

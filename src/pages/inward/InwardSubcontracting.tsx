@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Save, RotateCcw, FileSpreadsheet, Plus, Trash2 ,Loader2} from 'lucide-react';
+import { Search, Save, RotateCcw, FileSpreadsheet, Plus, Trash2, Loader2 } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { FormSection } from '@/components/shared/FormSection';
 import { TextField, SelectField } from '@/components/shared/FormField';
@@ -146,11 +146,13 @@ const fetchPOData = (poNumber: string) => {
 export default function InwardSubcontracting() {
   const { webUser } = useAuth();
   const [vendorList, setVendorList] = useState<any[]>([]);
+   const [userPlant, setPlant] = useState('');
   const [headerData, setHeaderData] = useState({
     WERKS: '',
-    DTYPE: 'IN',
+    REFDOCTYP: 'Subcontracting',
+      DTYPE: 'Inward Process',
     VHDAT_IN: new Date().toISOString().split('T')[0],
-    VHTIM_IN: new Date().toTimeString().slice(0, 8),
+    VHTIM_IN: new Date().toTimeString().slice(0, 5),
     VHNO: '',
     VHCL_TYPE: '',
     DRNAM: '',
@@ -161,7 +163,6 @@ export default function InwardSubcontracting() {
     VENDOR: '',
     VNAME: '',
     INWARDED_BY: '',
-    REFDOCTYP: 'SUB',
     LEDAT: '',
     LETIM: '',
     TRADDR: '',
@@ -224,6 +225,10 @@ export default function InwardSubcontracting() {
         toast.error('Failed to load vendors');
       }
     };
+    const loggedInDetails = localStorage.getItem('gate_entry_user');
+    const SelectedPlant = localStorage.getItem('SelectedPlant');
+    console.log("SelectedPlant",SelectedPlant)
+    headerData.WERKS =SelectedPlant
 
     fetchVendors();
   }, []);
@@ -297,6 +302,8 @@ export default function InwardSubcontracting() {
         i === index ? { ...item, [field]: value } : item
       )
     );
+
+    console.log("handleItemChange Items", items)
   };
 
   const handleAddRow = () => {
@@ -321,18 +328,80 @@ export default function InwardSubcontracting() {
   };
 
 
+  // const handleDeleteRow = (pageIndex: number) => {
+  //   console.log("items enter",items)
+  //   const actualIndex = startIndex + pageIndex;
+  //   if (items.length > 1) {
+  //     setItems(prev => prev.filter((_, i) => i !== actualIndex));
+  //     const newTotalPages = Math.ceil((items.length - 1) / ITEMS_PER_PAGE);
+  //     if (currentPage > newTotalPages && newTotalPages > 0) {
+  //       setCurrentPage(newTotalPages);
+  //     }
+  //   }
+  //   console.log("items last",items)
+  // };
+
   const handleDeleteRow = (pageIndex: number) => {
     const actualIndex = startIndex + pageIndex;
+
     if (items.length > 1) {
-      setItems(prev => prev.filter((_, i) => i !== actualIndex));
-      const newTotalPages = Math.ceil((items.length - 1) / ITEMS_PER_PAGE);
+      setItems(prev => {
+        // 1. Filter out the deleted row
+        const filtered = prev.filter((_, i) => i !== actualIndex);
+
+        // 2. Re-index the ITEM numbers for all remaining rows
+        const reIndexed = filtered.map((item, index) => ({
+          ...item,
+          ITEM: (index + 1) * 10 // This forces 10, 20, 30, etc.
+        }));
+
+        return reIndexed;
+      });
+
+      // 3. Update Pagination logic
+      const newTotalItems = items.length - 1;
+      const newTotalPages = Math.ceil(newTotalItems / ITEMS_PER_PAGE);
+
       if (currentPage > newTotalPages && newTotalPages > 0) {
         setCurrentPage(newTotalPages);
       }
     }
   };
-
   const handleSave = async () => {
+    // 1. Define the fields and their user-friendly labels
+    const checkFields = [
+      { value: headerData.WERKS, label: "Plant" },
+      { value: headerData.VHNO, label: "Vehicle No" },
+      { value: headerData.VHCL_TYPE, label: "Vehicle Type" },
+      { value: headerData.VHDAT_IN, label: "Vehicle Date" },
+      { value: headerData.VHTIM_IN, label: "Vehicle Time" },
+      { value: headerData.DRNAM, label: "Driver Name" },
+      { value: headerData.DRNUM, label: "Driver Contact" },
+      { value: headerData.TRANNAM, label: "Transporter Name" },
+    ];
+
+    // 2. Filter out the fields that are empty
+    const missingFields = checkFields
+      .filter(field => !field.value || field.value.toString().trim() === "")
+      .map(field => field.label);
+
+    // 3. If any are missing, show a detailed alert
+    if (missingFields.length > 0) {
+      Swal.fire({
+        title: "Missing Information",
+        html: `
+            <div style="text-align: left;">
+              <p>The following fields are required to save changes:</p>
+              <ul style="color: #d33; font-weight: 500;">
+                ${missingFields.map(f => `<li>• ${f}</li>`).join('')}
+              </ul>
+            </div>
+          `,
+        icon: "warning",
+        confirmButtonColor: "#f0ad4e",
+      });
+      return;
+    }
     console.log("headerData", headerData)
     console.log("items", items)
     const selectedItems = items.filter(item => item.CHK === "X");
@@ -346,6 +415,9 @@ export default function InwardSubcontracting() {
       });
       return;
     }
+    headerData.REFDOCTYP = "SUB"
+    headerData.DTYPE = "IN"
+    headerData.ERNAM = webUser
     const payload = {
       CREATE: "X",
       CHANGE: "",
@@ -426,7 +498,8 @@ export default function InwardSubcontracting() {
   const handleReset = () => {
     setHeaderData({
       WERKS: '',
-      DTYPE: 'IN',
+      REFDOCTYP: 'Subcontracting',
+      DTYPE: 'Inward Process',
       "VHDAT_IN": new Date().toISOString().split('T')[0], //Vehicle IN Date    //System Generated
       "VHTIM_IN": new Date().toTimeString().slice(0, 5), //Vehicle IN time  
       VHNO: '',
@@ -439,7 +512,6 @@ export default function InwardSubcontracting() {
       VENDOR: '',
       VNAME: '',
       INWARDED_BY: '',
-      REFDOCTYP: 'SUB',
       LEDAT: '',
       LETIM: '',
       TRADDR: '',
@@ -660,24 +732,32 @@ export default function InwardSubcontracting() {
           />
           <TextField
             label="Driver Name"
-
+            required
             value={headerData.DRNAM}
             onChange={(value) => setHeaderData({ ...headerData, DRNAM: value })}
             placeholder="Enter driver name"
           />
           <TextField
             label="Driver Contact"
+            required
             value={headerData.DRNUM}
             onChange={(value) => setHeaderData({ ...headerData, DRNUM: value })}
             placeholder="+91 98765 43210"
           />
-          <SelectField
+          <TextField
+            label="Transporter Name"
+            required
+            placeholder="Enter Transporter Name"
+            value={headerData.TRANNAM}
+            onChange={(value) => setHeaderData({ ...headerData, TRANNAM: value })}
+          />
+          {/* <SelectField
             label="Transporter Name"
             required
             value={headerData.TRANNAM}
             onChange={(value) => setHeaderData({ ...headerData, TRANNAM: value })}
             options={transporterOptions}
-          />
+          /> */}
           <TextField
             label="GR/LR Number"
             value={headerData.GR_LR_NUM}
@@ -818,9 +898,9 @@ export default function InwardSubcontracting() {
                       {/* Vendor */}
                       <td>
                         <Input
-                          value={item.CVNAME}
+                          value={item.CVNO}
                           onChange={(e) =>
-                            handleItemChange(actualIndex, 'CVNAME', e.target.value)
+                            handleItemChange(actualIndex, 'CVNO', e.target.value)
                           }
                           className="h-8"
                         />
@@ -829,9 +909,9 @@ export default function InwardSubcontracting() {
                       {/* Vendor Name */}
                       <td>
                         <Input
-                          value={item.CVNAME1}
+                          value={item.CVNAME}
                           onChange={(e) =>
-                            handleItemChange(actualIndex, 'CVNAME1', e.target.value)
+                            handleItemChange(actualIndex, 'CVNAME', e.target.value)
                           }
                           className="h-8"
                         />
@@ -850,8 +930,8 @@ export default function InwardSubcontracting() {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="GOOD">Good</SelectItem>
-                            <SelectItem value="DAMAGED">Damaged</SelectItem>
-                            <SelectItem value="PARTIAL">Partial</SelectItem>
+                            <SelectItem value="BAD">BAD</SelectItem>
+                            <SelectItem value="N/A">N/A</SelectItem>
                           </SelectContent>
                         </Select>
                       </td>

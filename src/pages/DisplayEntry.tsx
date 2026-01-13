@@ -68,7 +68,7 @@ export default function DisplayEntry() {
   const [isLoading, setIsLoading] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
 
-    const [headerData, setHeaderData] = useState({
+  const [headerData, setHeaderData] = useState({
     plant: '',
     gateEntryType: '',
     vehicleDate: '',
@@ -97,7 +97,16 @@ export default function DisplayEntry() {
       toast.error('Please enter Gate Entry Number');
       return;
     }
-setIsLoading(true);
+      if (gateEntryNo.length !== 10) {
+           Swal.fire({
+                title: "warning",
+                text:"Gate Entry Number Should be 10 Digits Only",
+                icon: "warning",
+                confirmButtonColor: "#f0ad4e",
+              });
+          return;
+        }
+    setIsLoading(true);
     try {
       const payload = {
         "GET_ENTRY": gateEntryNo,
@@ -137,43 +146,43 @@ setIsLoading(true);
         });
         setItems([]);
 
-      }else{
+      } else {
         const headerResponse = response.HEADER[0]
-      const itemResponse = response.ITEM
-      console.log("headerResponse", headerResponse, "itemResponse", itemResponse)
+        const itemResponse = response.ITEM
+        console.log("headerResponse", headerResponse, "itemResponse", itemResponse)
 
-      // Simulate fetching gate entry data
-      setTimeout(() => {
-        setHeaderData({
-          plant: headerResponse.WERKS,
-          gateEntryType: headerResponse.WERKS,
-          vehicleDate: headerResponse.VHDAT_IN,
-          vehicleTime: headerResponse.VHTIM_IN,
-          vehicleNo: headerResponse.VHNO,
-          vehicleType: headerResponse.VHCL_TYPE,
-          driverName: headerResponse.DRNAM,
-          driverContact: headerResponse.DRNUM,
-          transporterName: headerResponse.TRANNAM,
-          grLrNumber: headerResponse.GR_LR_NUM,
-          poNumber: headerResponse.PONO,
-          vendorNumber: headerResponse.VENDOR,
-          vendorName: headerResponse.VNAME,
-          inwardedBy: headerResponse.INWARDED_BY,
-          refDocType: headerResponse.REFDOCTYP,
-          vehicleOutDate: headerResponse.LEDAT,
-          vehicleOutTime: headerResponse.LETIM,
-          TRADDR: headerResponse.TRADDR,
-          REMARKS: headerResponse.REMARKS
-        });
-        const itemResponse: ItemRow[] = response.ITEM;
-        setItems(itemResponse);
-        console.log("itemResponse", itemResponse)
-        setIsLoaded(true);
-     
-        toast.success('Data Fetched successfully');
-      }, 1000);
+        // Simulate fetching gate entry data
+        setTimeout(() => {
+          setHeaderData({
+            plant: headerResponse.WERKS,
+            gateEntryType: headerResponse.WERKS,
+            vehicleDate: headerResponse.VHDAT_IN,
+            vehicleTime: headerResponse.VHTIM_IN,
+            vehicleNo: headerResponse.VHNO,
+            vehicleType: headerResponse.VHCL_TYPE,
+            driverName: headerResponse.DRNAM,
+            driverContact: headerResponse.DRNUM,
+            transporterName: headerResponse.TRANNAM,
+            grLrNumber: headerResponse.GR_LR_NUM,
+            poNumber: headerResponse.PONO,
+            vendorNumber: headerResponse.VENDOR,
+            vendorName: headerResponse.VNAME,
+            inwardedBy: headerResponse.INWARDED_BY,
+            refDocType: headerResponse.REFDOCTYP,
+            vehicleOutDate: headerResponse.LEDAT,
+            vehicleOutTime: headerResponse.LETIM,
+            TRADDR: headerResponse.TRADDR,
+            REMARKS: headerResponse.REMARKS
+          });
+          const itemResponse: ItemRow[] = response.ITEM;
+          setItems(itemResponse);
+          console.log("itemResponse", itemResponse)
+          setIsLoaded(true);
+
+          toast.success('Data Fetched successfully');
+        }, 0);
       }
-      
+
 
     } catch (err) {
       console.error(err);
@@ -189,7 +198,7 @@ setIsLoading(true);
   const handlePrint = () => {
     toast.success('Preparing print preview...');
   };
-   const handleItemChange = (
+  const handleItemChange = (
     index: number,
     field: keyof ItemRow,
     value: any
@@ -273,21 +282,21 @@ setIsLoading(true);
     },
   ];
   const FullScreenLoader = () => {
-      // We create the element to be teleported
-      const loaderContent = (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="flex flex-col items-center gap-4 p-6 bg-white/10 rounded-lg border border-white/20">
-            <div className="w-12 h-12 border-4 border-t-blue-500 border-white/20 rounded-full animate-spin" />
-            <p className="text-white font-medium text-lg tracking-wide">
-              Please Wait Loading...
-            </p>
-          </div>
+    // We create the element to be teleported
+    const loaderContent = (
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div className="flex flex-col items-center gap-4 p-6 bg-white/10 rounded-lg border border-white/20">
+          <div className="w-12 h-12 border-4 border-t-blue-500 border-white/20 rounded-full animate-spin" />
+          <p className="text-white font-medium text-lg tracking-wide">
+            Please Wait Loading...
+          </p>
         </div>
-      );
-  
-      // We render it into the body instead of the local component tree
-      return createPortal(loaderContent, document.body);
-    };
+      </div>
+    );
+
+    // We render it into the body instead of the local component tree
+    return createPortal(loaderContent, document.body);
+  };
 
   return (
     <div className="space-y-6">
@@ -321,7 +330,7 @@ setIsLoading(true);
             >
               {isLoading ? (
                 <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin"
-                 />
+                />
               ) : (
                 <Search className="w-4 h-4" />
               )}
@@ -340,7 +349,7 @@ setIsLoading(true);
         <>
           {/* Header Information */}
           <FormSection title="Header Information">
-             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <TextField label="Gate Entry No" value={gateEntryNo} readOnly />
               <TextField label="Gate Entry No" value={headerData.plant} readOnly />
               {/* <SelectField
@@ -386,7 +395,7 @@ setIsLoading(true);
 
           {/* Vehicle & Transport Details */}
           <FormSection title="Vehicle & Transport Details">
-             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <TextField
                 label="Vehicle No"
                 value={headerData.vehicleNo}
@@ -441,7 +450,7 @@ setIsLoading(true);
 
           {/* Vendor/Reference Details */}
           <FormSection title="Reference Details">
-             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <TextField label="PO Number" value={headerData.poNumber} readOnly />
               <TextField label="Vendor Number" value={headerData.vendorNumber} readOnly />
               <TextField label="Vendor Name" value={headerData.vendorName} readOnly />
@@ -451,7 +460,7 @@ setIsLoading(true);
 
           {/* Item Grid */}
           <FormSection title="Item Details">
-           <DataGrid
+            <DataGrid
               columns={columns}
               data={items}
               editable={true}
