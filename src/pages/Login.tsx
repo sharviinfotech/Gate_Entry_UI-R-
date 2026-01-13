@@ -24,6 +24,7 @@ export default function Login() {
     // Simulate login
     setTimeout(() => {
       setIsLoading(false);
+      localStorage.setItem('SelectedPlant', '');
       navigate('/dashboard');
     }, 1000);
   };

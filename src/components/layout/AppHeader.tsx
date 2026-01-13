@@ -62,7 +62,7 @@ export function AppHeader({ sidebarTrigger, collapseTrigger }: any) {
           value={selectedPlant}
           onValueChange={(val) => {
             navigate('/dashboard');
-            localStorage.setItem('SelectedPlant', '');
+            
             setSelectedPlant(val);
             console.log("val",val)
             localStorage.setItem('SelectedPlant', val);

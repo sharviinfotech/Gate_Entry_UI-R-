@@ -62,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (firstPlant.ROLES?.length > 0) {
           setSelectedRole(firstPlant.ROLES[0].ROLE);
         }
-        console.log("firstPlant",firstPlant)
+        console.log("firstPlant", firstPlant)
       }
     }
     setLoading(false);
@@ -93,20 +93,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (response.ok && data.USER) {
         localStorage.setItem('gate_entry_user', JSON.stringify(data));
         setUser(data);
-         localStorage.setItem('SelectedPlant', '');
         // FORCE SELECTION TO INDEX 0 ON LOGIN
         if (data.PLANTS && data.PLANTS.length > 0) {
           const firstPlant = data.PLANTS[0];
           setSelectedPlant(String(firstPlant.PLANT)); // Force index 0
-
+          const plantId = String(firstPlant.PLANT);
+          setSelectedPlant(plantId);
+          // 3. Persist to localStorage
+          localStorage.setItem('SelectedPlant', plantId);
           if (firstPlant.ROLES && firstPlant.ROLES.length > 0) {
             setSelectedRole(firstPlant.ROLES[0].ROLE); // Force index 0
           } else {
             setSelectedRole("");
           }
-          console.log("firstPlant",firstPlant)
+          console.log("firstPlant", firstPlant)
         }
-        
+
 
         return { error: null };
         return { error: null };
