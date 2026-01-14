@@ -217,7 +217,7 @@ export default function InwardPOReference() {
         "ERNAM": "",
         "LIFNR": "",
         "TRADDR": "", //Address
-        "DTYPE": headerData.DTYPE || "IN",               //Mandatory, Hardcoded
+        "DTYPE": "IN",               //Mandatory, Hardcoded
         "GATEPASS": "", //GatePass Number
         "REFDOCTYP": "PO", //REF Doc Type      //In with reference PO, 'PO' is hardcoded, Mandatory
         "DESTINATION": "",
