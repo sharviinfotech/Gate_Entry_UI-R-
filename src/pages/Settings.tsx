@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Save, Plus, Trash2, Edit2, Shield, Users, Check, X, Search } from 'lucide-react';
+import { Save, Plus, Trash2, Edit2, Shield, Users, Check, X, Search,Eye, EyeOff, } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { FormSection } from '@/components/shared/FormSection';
 import { TextField, SelectField } from '@/components/shared/FormField';
@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Swal from "sweetalert2";
+import { createPortal } from 'react-dom';
 
 import { toast } from 'sonner';
 import service from "../services/generalservice.js";
@@ -69,12 +70,14 @@ export default function Settings() {
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [viewType, setViewType] = useState<'PLANT' | 'ROLE' | null>(null);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-
+  const [showPassword, setShowPassword] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
   const openViewDialog = (user: User, type: 'PLANT' | 'ROLE') => {
     setSelectedUser(user);
     setViewType(type);
     setIsViewDialogOpen(true);
   };
+  const handleClickShowPassword = () => setShowPassword(!showPassword);
 
 
   const [plantOptions, setPlantOptions] = useState<
@@ -244,7 +247,7 @@ export default function Settings() {
 
 
     console.log("FINAL PAYLOAD:", payload);
-
+ setIsLoading(true);
     try {
       const res = await service.AddUser(payload);
       if (res.STATUS === "SUCCESS" || res.STATUS === "TRUE") {
@@ -262,6 +265,8 @@ export default function Settings() {
       }
     } catch {
       toast.error("Server error");
+    }finally{
+       setIsLoading(false);
     }
   };
 
@@ -313,7 +318,7 @@ export default function Settings() {
     }
 
     console.log("EDIT PAYLOAD:", payload);
-
+ setIsLoading(true);
     try {
       const res = await service.UserEdit(payload);
 
@@ -339,6 +344,8 @@ export default function Settings() {
     } catch (error) {
       console.error(error);
       toast.error("Server error");
+    }finally{
+       setIsLoading(false);
     }
   };
 
@@ -478,7 +485,7 @@ export default function Settings() {
         }))
       }
     };
-
+ setIsLoading(true);
     try {
       const res = await service.UserRoleCreation(payload);
       console.log("UserRoleCreation API response:", res);
@@ -508,6 +515,8 @@ export default function Settings() {
       }
     } catch (err) {
       toast.error("API Error");
+    }finally{
+       setIsLoading(false);
     }
   };
 
@@ -523,6 +532,7 @@ export default function Settings() {
 
 
   const handleEditRole = async () => {
+     setIsLoading(true);
     try {
       const payload = buildEditPayload();
 
@@ -545,6 +555,8 @@ export default function Settings() {
     } catch (error) {
       toast.error("API Error");
       console.error(error);
+    }finally{
+       setIsLoading(false);
     }
   };
 
@@ -636,9 +648,26 @@ export default function Settings() {
     }
     setIsPermissionsDialogOpen(false);
   };
+    const FullScreenLoader = () => {
+        // We create the element to be teleported
+        const loaderContent = (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div className="flex flex-col items-center gap-4 p-6 bg-white/10 rounded-lg border border-white/20">
+              <div className="w-12 h-12 border-4 border-t-blue-500 border-white/20 rounded-full animate-spin" />
+              <p className="text-white font-medium text-lg tracking-wide">
+                Please Wait Loading...
+              </p>
+            </div>
+          </div>
+        );
+    
+        // We render it into the body instead of the local component tree
+        return createPortal(loaderContent, document.body);
+      };
 
   return (
     <div className="space-y-6 max-w-7xl">
+      {isLoading && <FullScreenLoader />}
       <PageHeader
         title="Settings"
         subtitle="Configure users and roles"
@@ -814,7 +843,7 @@ export default function Settings() {
                           className="gap-2"
                         >
                           <Shield className="w-4 h-4" />
-                          Manage ({role.permissions.length})
+                          Screens ({role.permissions.length})
                         </Button>
                       </TableCell>
                       <TableCell>
@@ -943,12 +972,33 @@ export default function Settings() {
                 placeholder="Enter email"
                 required
               />
-              <TextField
+              {/* <TextField
                 label="Contact Number"
                 value={userForm.contactNumber}
                 onChange={(value) => setUserForm({ ...userForm, contactNumber: value })}
                 placeholder="Enter contact number"
                 required
+              /> */}
+              <TextField
+                label="Contact Number"
+                value={userForm.contactNumber}
+                placeholder="Enter 10-digit number"
+                required
+                // FIX 1: Access value directly if your component doesn't pass an event
+                onChange={(val: string) => {
+                  // Only allow numbers and max length of 10
+                  const numericValue = val.replace(/\D/g, '');
+                  if (numericValue.length <= 10) {
+                    setUserForm({ ...userForm, contactNumber: numericValue });
+                  }
+                }}
+                // FIX 2 & 3: error expects a string message, not a boolean
+                // If length is between 1 and 9, show the error message string
+                error={
+                  userForm.contactNumber.length > 0 && userForm.contactNumber.length < 10
+                    ? "Contact number must be 10 digits"
+                    : undefined
+                }
               />
               {/* Role Multi-Select with Checkboxes */}
               <div className="space-y-2">
@@ -1006,7 +1056,7 @@ export default function Settings() {
 
 
 
-              <TextField
+              {/* <TextField
                 label="Password"
                 type="password"
                 value={userForm.password}
@@ -1015,7 +1065,52 @@ export default function Settings() {
                 }
                 placeholder="Enter password"
 
-              />
+              /> */}
+              <div style={{ position: 'relative', width: '100%' }}>
+                <TextField
+                  label="Password"
+                  type={showPassword ? "text" : "password"}
+                  value={userForm.password}
+                  onChange={(val) => setUserForm({ ...userForm, password: val })}
+                  placeholder="Enter password"
+                />
+
+                <button
+                  type="button"
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',          // Centers vertically
+                    transform: 'translateY(10%)', // Fine-tune based on label height
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '18px',
+                    padding: '5px'
+                  }}
+                  onClick={() => setShowPassword(!showPassword)}
+                  
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+                {/* <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',          // Centers vertically
+                    transform: 'translateY(10%)', // Fine-tune based on label height
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '18px',
+                    padding: '5px'
+                  }}
+                >
+                  {showPassword ? '👁️' : '🙈'}
+                </button> */}
+              </div>
               <SelectField
                 label="Status"
                 value={userForm.status}
@@ -1251,7 +1346,7 @@ export default function Settings() {
               )}
             </div>
           </ScrollArea>
-          <DialogFooter className="border-t pt-4">
+          {/* <DialogFooter className="border-t pt-4">
             <Button variant="outline" onClick={() => setIsPermissionsDialogOpen(false)}>Cancel</Button>
             <Button
               onClick={handleSavePermissions}
@@ -1261,7 +1356,7 @@ export default function Settings() {
               <Save className="w-4 h-4" />
               Save
             </Button>
-          </DialogFooter>
+          </DialogFooter> */}
         </DialogContent>
       </Dialog>
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>

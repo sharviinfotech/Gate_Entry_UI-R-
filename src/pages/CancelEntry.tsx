@@ -11,6 +11,9 @@ import { toast } from 'sonner';
 import service from "../services/generalservice.js"
 import Swal from "sweetalert2";
 import { useAuth } from '@/contexts/AuthContext';
+import { createPortal } from 'react-dom';
+
+
 export default function CancelEntry() {
   const getTodayDate = () => new Date().toISOString().split('T')[0]; // YYYY-MM-DD
   const getCurrentTime = () => new Date().toTimeString().slice(0, 8); // HH:mm:ss
@@ -19,6 +22,7 @@ export default function CancelEntry() {
   const [confirmed, setConfirmed] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const { webUser } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
 
   const [headerData, setHeaderData] = useState({
     GENO: '',
@@ -45,6 +49,7 @@ if (gateEntryNo.length !== 10) {
               });
           return;
         }
+           setIsLoading(true);
     try {
       const payload = {
         EXIT_GE: gateEntryNo,
@@ -122,6 +127,8 @@ if (gateEntryNo.length !== 10) {
     } catch (err) {
       console.error(err);
       toast.error("Failed to load Data");
+    }finally{
+         setIsLoading(false);
     }
   };
 
@@ -133,6 +140,16 @@ if (gateEntryNo.length !== 10) {
       toast.error('Complete all fields');
       return;
     }
+     const storedDetails = localStorage.getItem('gate_entry_user');
+
+      // 2. Parse it back into an object if it exists
+      let LCUSR
+      if (storedDetails) {
+        const loggedInDetails = JSON.parse(storedDetails);
+
+        // 3. Now you can access the property safely
+        LCUSR = loggedInDetails.USER;
+      }
 
     const payload = {
       EXIT_CANCEL: {
@@ -153,13 +170,14 @@ if (gateEntryNo.length !== 10) {
         LETIM: "",
         SGTXT: "",
         INWARDED_BY: headerData.INWARDED_BY,
-        LCUSR: webUser,
+        LCUSR: LCUSR,
         // Flags
         GECAN: "X",
         GEEXT: ""
       }
     };
     console.log('payload', payload)
+      setIsLoading(true);
     try {
       const response = await service.save_Exit_Cancel(payload);
       console.log("response", response)
@@ -192,17 +210,35 @@ if (gateEntryNo.length !== 10) {
     } catch (err) {
       console.error(err);
       toast.error('Cancel failed');
+    }finally{
+        setIsLoading(false);
     }
   };
+  const FullScreenLoader = () => {
+    // We create the element to be teleported
+    const loaderContent = (
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div className="flex flex-col items-center gap-4 p-6 bg-white/10 rounded-lg border border-white/20">
+          <div className="w-12 h-12 border-4 border-t-blue-500 border-white/20 rounded-full animate-spin" />
+          <p className="text-white font-medium text-lg tracking-wide">
+            Please Wait Loading...
+          </p>
+        </div>
+      </div>
+    );
 
+    // We render it into the body instead of the local component tree
+    return createPortal(loaderContent, document.body);
+  };
 
   return (
     <div className="space-y-6">
+       {isLoading && <FullScreenLoader />}
       <PageHeader title="Cancel Gate Entry" subtitle="Cancel existing gate entries" breadcrumbs={[{ label: 'Cancel' }]} />
       <FormSection title="Fetch Entry">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <TextField label="Gate Entry Number" value={gateEntryNo} onChange={setGateEntryNo} placeholder="Enter Gate Entry No" required />
-          <div className="flex items-end"><Button onClick={handleFetch} className="gap-2 w-full"><Search className="w-4 h-4" />Fetch</Button></div>
+          <div className="flex items-end"><Button onClick={handleFetch}  disabled={isLoading}className="gap-2 w-full"><Search className="w-4 h-4" />Fetch</Button></div>
         </div>
       </FormSection>
       {isLoaded && (

@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useMemo } from 'react';
+const BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL;
 import Swal from "sweetalert2";
 // Define the structure based on your API response
 interface Plant {
@@ -76,7 +77,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user, selectedPlant, selectedRole]);
   const signIn = async (username: string, password: string) => {
     try {
-      const response = await fetch('http://localhost:3005/api/external/Gate_Entry/Login_Submit_Authentication', {
+      
+      const response = await fetch(`${BASE_URL}api/external/Gate_Entry/Login_Submit_Authentication`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

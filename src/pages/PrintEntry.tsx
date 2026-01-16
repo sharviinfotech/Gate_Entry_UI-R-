@@ -6,6 +6,7 @@ import { TextField, SelectField } from '@/components/shared/FormField';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import service from "../services/generalservice.js"
+import { createPortal } from 'react-dom';
 
 export default function PrintEntry() {
   const [gateEntryNo, setGateEntryNo] = useState('');
@@ -65,9 +66,26 @@ export default function PrintEntry() {
     link.download = `GateEntry_${gateEntryNo}.pdf`;
     link.click();
   };
+    const FullScreenLoader = () => {
+    // We create the element to be teleported
+    const loaderContent = (
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div className="flex flex-col items-center gap-4 p-6 bg-white/10 rounded-lg border border-white/20">
+          <div className="w-12 h-12 border-4 border-t-blue-500 border-white/20 rounded-full animate-spin" />
+          <p className="text-white font-medium text-lg tracking-wide">
+            Please Wait Loading...
+          </p>
+        </div>
+      </div>
+    );
+
+    // We render it into the body instead of the local component tree
+    return createPortal(loaderContent, document.body);
+  };
 
   return (
     <div className="space-y-6">
+       {isLoading && <FullScreenLoader />}
       <PageHeader
         title="Print Gate Entry"
         subtitle="Generate and print documents"

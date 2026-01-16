@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Search, Printer, FileDown } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { FormSection } from '@/components/shared/FormSection';
-import { TextField } from '@/components/shared/FormField';
+import { TextField, SelectField } from '@/components/shared/FormField';
 import { DataGrid } from '@/components/shared/DataGrid';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -67,27 +67,74 @@ export default function DisplayEntry() {
   const [gateEntryNo, setGateEntryNo] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
-
+  const [refDocType, setRefDocType] = useState<string>("");
   const [headerData, setHeaderData] = useState({
-    plant: '',
-    gateEntryType: '',
-    vehicleDate: '',
-    vehicleTime: '',
-    vehicleNo: '',
-    vehicleType: '',
-    driverName: '',
-    driverContact: '',
-    transporterName: '',
-    grLrNumber: '',
-    poNumber: '',
-    vendorNumber: '',
-    vendorName: '',
-    inwardedBy: '',
-    refDocType: '',
-    vehicleOutDate: '',
-    vehicleOutTime: '',
+    WERKS: '',
+    DTYPE: '',
+    VHDAT_IN: '',
+    VHTIM_IN: '',
+    VHNO: '',
+    VHCL_TYPE: '',
+    DRNAM: '',
+    DRNUM: '',
+    TRANNAM: '',
+    GR_LR_NUM: '',
+    PONO: '',
+    VENDOR: '',
+    VNAME: '',
+    INWARDED_BY: '',
+    REFDOCTYP: '',
+    LEDAT: '',
+    LETIM: '',
     TRADDR: '',
-    REMARKS: ''
+    REMARKS: '',
+
+    "GENO": "",
+    "USR_IN": "",
+    "GRWGT": 0,
+    "TRWGT": 0,
+    "NTWGT": 0,
+    "WUNIT": "",
+    "GRUSR": "",
+    "GRDAT": "",
+    "GRTIM": "",
+    "TRUSR": "",
+    "TRDAT": "",
+    "TRTIM": "",
+    "INIWT": 0,
+    "INIDT": "",
+    "INITM": "00:00:00",
+    "INIUR": "",
+    "TOTWGT": 0,
+    "RBSTAT": "",
+    "WBOMP": "",
+    "WBCOMP": "",
+    "GEEXT": "",
+    "LEUSR": "",
+    "SGTXT": "",
+    "GECAN": "",
+    "LCDAT": "0000-00-00",
+    "LCTIM": "00:00:00",
+    "LCUSR": "",
+    "SCTXT": "",
+    "ERNAM": "",
+    "LIFNR": "",
+    "GATEPASS": "",
+    "DESTINATION": "",
+    "CAPACITY": "",
+    "WBIND": "",
+    "MIX": "",
+    "MJAHR": 0,
+    "AMOUNT": 0,
+    "ZTRID": "",
+    "ZTRIP": "",
+    "SP_DES": "",
+    "PAYMENTTERMS": "",
+    "TOT_COSUME": "",
+    "PEND_AMOUNT": "",
+    "BLNO": "",
+    "PURPOSE": "",
+    "REUSE": ""
   });
 
   const [items, setItems] = useState<ItemRow[]>([]);
@@ -97,15 +144,15 @@ export default function DisplayEntry() {
       toast.error('Please enter Gate Entry Number');
       return;
     }
-      if (gateEntryNo.length !== 10) {
-           Swal.fire({
-                title: "warning",
-                text:"Gate Entry Number Should be 10 Digits Only",
-                icon: "warning",
-                confirmButtonColor: "#f0ad4e",
-              });
-          return;
-        }
+    if (gateEntryNo.length !== 10) {
+      Swal.fire({
+        title: "warning",
+        text: "Gate Entry Number Should be 10 Digits Only",
+        icon: "warning",
+        confirmButtonColor: "#f0ad4e",
+      });
+      return;
+    }
     setIsLoading(true);
     try {
       const payload = {
@@ -113,74 +160,138 @@ export default function DisplayEntry() {
         "CHANGE": "",
         "DISPLAY": "X"
       }
+      setIsLoading(true);
       const response = await service.fetchGateEntryChange(payload);
       console.log("response", response)
-      if (response[0]?.MSG_TYPE == "E") {
+      if (response.length > 0) {
 
-        Swal.fire({
-          title: "error",
-          text: response[0].MSG,
-          icon: "error",
-          confirmButtonColor: "#3085d6",
-        });
-        setHeaderData({
-          plant: '',
-          gateEntryType: '',
-          vehicleDate: '',
-          vehicleTime: '',
-          vehicleNo: '',
-          vehicleType: '',
-          driverName: '',
-          driverContact: '',
-          transporterName: '',
-          grLrNumber: '',
-          poNumber: '',
-          vendorNumber: '',
-          vendorName: '',
-          inwardedBy: '',
-          refDocType: '',
-          vehicleOutDate: '',
-          vehicleOutTime: '',
-          TRADDR: '',
-          REMARKS: ''
-        });
-        setItems([]);
+        const sucessMessages = response
+          .filter(r => r.MSG_TYPE === "S")
+          .map(r => `• ${r.MSG}`);
+        const errorMessages = response
+          .filter(r => r.MSG_TYPE === "E")
+          .map(r => `• ${r.MSG}`);
+        const warnigMessages = response
+          .filter(r => r.MSG_TYPE === "I")
+          .map(r => `• ${r.MSG}`);
+        if (sucessMessages.length > 0) {
+          Swal.fire({
+            title: "success",
+            html: sucessMessages.join("<br>"),
+            icon: "success",
+            confirmButtonColor: "#3085d6",
+          });
 
+          return
+        }
+        if (warnigMessages.length > 0) {
+          Swal.fire({
+            title: "success",
+            html: warnigMessages.join("<br>"),
+            icon: "success",
+            confirmButtonColor: "#3085d6",
+          });
+
+          return
+        }
+        if (errorMessages.length > 0) {
+          Swal.fire({
+            title: "Error",
+            html: errorMessages.join("<br>"),
+            icon: "error",
+            confirmButtonColor: "#d33",
+          });
+
+
+
+          return
+        }
       } else {
         const headerResponse = response.HEADER[0]
         const itemResponse = response.ITEM
         console.log("headerResponse", headerResponse, "itemResponse", itemResponse)
-
+        // Set the visibility state: true if it's a PO, false otherwise
+        const docType = headerResponse.REFDOCTYP; // e.g., "PO", "SUB", or "WOREF"
+        setRefDocType(docType);
+        console.log("docType", docType)
         // Simulate fetching gate entry data
         setTimeout(() => {
-          setHeaderData({
-            plant: headerResponse.WERKS,
-            gateEntryType: headerResponse.WERKS,
-            vehicleDate: headerResponse.VHDAT_IN,
-            vehicleTime: headerResponse.VHTIM_IN,
-            vehicleNo: headerResponse.VHNO,
-            vehicleType: headerResponse.VHCL_TYPE,
-            driverName: headerResponse.DRNAM,
-            driverContact: headerResponse.DRNUM,
-            transporterName: headerResponse.TRANNAM,
-            grLrNumber: headerResponse.GR_LR_NUM,
-            poNumber: headerResponse.PONO,
-            vendorNumber: headerResponse.VENDOR,
-            vendorName: headerResponse.VNAME,
-            inwardedBy: headerResponse.INWARDED_BY,
-            refDocType: headerResponse.REFDOCTYP,
-            vehicleOutDate: headerResponse.LEDAT,
-            vehicleOutTime: headerResponse.LETIM,
-            TRADDR: headerResponse.TRADDR,
-            REMARKS: headerResponse.REMARKS
-          });
+
           const itemResponse: ItemRow[] = response.ITEM;
           setItems(itemResponse);
           console.log("itemResponse", itemResponse)
           setIsLoaded(true);
-
+          setIsLoading(false);
           toast.success('Data Fetched successfully');
+          setHeaderData({
+            GENO: headerResponse.GENO,
+            WERKS: headerResponse.WERKS,
+            DTYPE: headerResponse.DTYPE,
+            VHDAT_IN: headerResponse.VHDAT_IN,
+            VHTIM_IN: headerResponse.VHTIM_IN,
+            VHNO: headerResponse.VHNO,
+            VHCL_TYPE: headerResponse.VHCL_TYPE,
+            DRNAM: headerResponse.DRNAM,
+            DRNUM: headerResponse.DRNUM,
+            TRANNAM: headerResponse.TRANNAM,
+            GR_LR_NUM: headerResponse.GR_LR_NUM,
+            PONO: headerResponse.PONO,
+            VENDOR: headerResponse.VENDOR || itemResponse[0].CVNO,
+            VNAME: headerResponse.VNAME || itemResponse[0].CVNAME,
+            INWARDED_BY: headerResponse.INWARDED_BY,
+            REFDOCTYP: headerResponse.REFDOCTYP,
+            LEDAT: headerResponse.LEDAT,
+            LETIM: headerResponse.LETIM,
+            TRADDR: headerResponse.TRADDR,
+            REMARKS: headerResponse.REMARKS,
+            "USR_IN": "",
+            "GRWGT": 0,
+            "TRWGT": 0,
+            "NTWGT": 0,
+            "WUNIT": "",
+            "GRUSR": "",
+            "GRDAT": "",
+            "GRTIM": "",
+            "TRUSR": "",
+            "TRDAT": "",
+            "TRTIM": "",
+            "INIWT": 0,
+            "INIDT": "",
+            "INITM": "00:00:00",
+            "INIUR": "",
+            "TOTWGT": 0,
+            "RBSTAT": "",
+            "WBOMP": "",
+            "WBCOMP": "",
+            "GEEXT": "",
+            "LEUSR": "",
+            "SGTXT": "",
+            "GECAN": "",
+            "LCDAT": "0000-00-00",
+            "LCTIM": "00:00:00",
+            "LCUSR": "",
+            "SCTXT": "",
+            "ERNAM": headerResponse.ERNAM,
+            "LIFNR": "",
+            "GATEPASS": "",
+            "DESTINATION": "",
+            "CAPACITY": "",
+            "WBIND": "",
+            "MIX": "",
+            "MJAHR": 0,
+            "AMOUNT": 0,
+            "ZTRID": "",
+            "ZTRIP": "",
+            "SP_DES": "",
+            "PAYMENTTERMS": "",
+            "TOT_COSUME": "",
+            "PEND_AMOUNT": "",
+            "BLNO": "",
+            "PURPOSE": "",
+            "REUSE": ""
+          });
         }, 0);
+
       }
 
 
@@ -350,46 +461,61 @@ export default function DisplayEntry() {
           {/* Header Information */}
           <FormSection title="Header Information">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <TextField label="Gate Entry No" value={gateEntryNo} readOnly />
-              <TextField label="Gate Entry No" value={headerData.plant} readOnly />
+              {/* <TextField label="Gate Entry No" value={gateEntryNo}  /> */}
+              <TextField label="Plant"
+                required
+                readOnly
+                value={headerData.WERKS} />
               {/* <SelectField
-                label="Plant"
-                value={headerData.plant}
-                onChange={(value) => setHeaderData({ ...headerData, plant: value })}
+                label="WERKS"
+                value={headerData.WERKS}
+                onChange={(value) => setHeaderData({ ...headerData, WERKS: value })}
                 options={[
-                  { value: '1000', label: '1000 - Main Plant' },
+                  { value: '1000', label: '1000 - Main WERKS' },
                   { value: '2000', label: '2000 - Warehouse' },
                   { value: '3000', label: '3000 - Factory' },
                 ]}
               /> */}
-              <TextField label="Gate Entry Type" value={headerData.gateEntryType} readOnly />
+              <TextField label="Gate Entry Type" value={headerData.DTYPE}
+                required
+                readOnly
+                onChange={(value) => setHeaderData({ ...headerData, DTYPE: value })} />
+              <TextField
+                required
+                label="Ref Doc Type"
+                readOnly
+                value={headerData.REFDOCTYP}
+
+              />
               <TextField
                 label="Vehicle Date"
                 type="date"
-                value={headerData.vehicleDate}
-                onChange={(value) => setHeaderData({ ...headerData, vehicleDate: value })}
+                value={headerData.VHDAT_IN}
+                required
+                readOnly
+                onChange={(value) => setHeaderData({ ...headerData, VHDAT_IN: value })}
               />
               <TextField
                 label="Vehicle Time"
                 type="time"
-                value={headerData.vehicleTime}
-                onChange={(value) => setHeaderData({ ...headerData, vehicleTime: value })}
+                required
+                readOnly
+                value={headerData.VHTIM_IN}
+                onChange={(value) => setHeaderData({ ...headerData, VHTIM_IN: value })}
               />
               <TextField
                 label="Vehicle Out Date"
                 type="date"
-                value={headerData.vehicleOutDate}
+                readOnly
+                value={headerData.LEDAT}
               />
               <TextField
                 label="Vehicle Out Time"
                 type="time"
-                value={headerData.vehicleOutTime}
-              />
-              <TextField
-                label="Ref Doc Type"
-                value={headerData.refDocType}
                 readOnly
+                value={headerData.LETIM}
               />
+
             </div>
           </FormSection>
 
@@ -398,18 +524,24 @@ export default function DisplayEntry() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <TextField
                 label="Vehicle No"
-                value={headerData.vehicleNo}
-                onChange={(value) => setHeaderData({ ...headerData, vehicleNo: value })}
+                required
+                readOnly
+                value={headerData.VHNO}
+                onChange={(value) => setHeaderData({ ...headerData, VHNO: value })}
               />
               <TextField
                 label="Vehicle Type"
-                value={headerData.vehicleType}
-
+                required
+                readOnly
+                value={headerData.VHCL_TYPE}
+                onChange={(value) => setHeaderData({ ...headerData, VHCL_TYPE: value })}
               />
+
+
               {/* <SelectField
                 label="Vehicle Type"
-                value={headerData.vehicleType}
-                onChange={(value) => setHeaderData({ ...headerData, vehicleType: value })}
+                value={headerData.VHCL_TYPE}
+                onChange={(value) => setHeaderData({ ...headerData, VHCL_TYPE: value })}
                 options={[
                   { value: 'truck', label: 'Truck' },
                   { value: 'tempo', label: 'Tempo' },
@@ -419,55 +551,185 @@ export default function DisplayEntry() {
               /> */}
               <TextField
                 label="Driver Name"
-                value={headerData.driverName}
-                onChange={(value) => setHeaderData({ ...headerData, driverName: value })}
+                required
+                readOnly
+                value={headerData.DRNAM}
+                onChange={(value) => setHeaderData({ ...headerData, DRNAM: value })}
               />
               <TextField
                 label="Driver Contact"
-                value={headerData.driverContact}
-                onChange={(value) => setHeaderData({ ...headerData, driverContact: value })}
+                required
+                readOnly
+                value={headerData.DRNUM}
+                onChange={(value) => setHeaderData({ ...headerData, DRNUM: value })}
               />
               <TextField
                 label="Transporter Name"
-                value={headerData.transporterName}
-                onChange={(value) => setHeaderData({ ...headerData, transporterName: value })}
+                required
+                readOnly
+                placeholder="Enter Transporter Name"
+                value={headerData.TRANNAM}
+                onChange={(value) => setHeaderData({ ...headerData, TRANNAM: value })}
               />
               <TextField
                 label="GR/LR Number"
-                value={headerData.grLrNumber}
-                onChange={(value) => setHeaderData({ ...headerData, grLrNumber: value })}
+                readOnly
+                value={headerData.GR_LR_NUM}
+                onChange={(value) => setHeaderData({ ...headerData, GR_LR_NUM: value })}
               />
-              <TextField
-                label="Address"
-                value={headerData.TRADDR}
+
+              <TextField label="Inwarded By"
+                required
+                readOnly
+                value={headerData.INWARDED_BY}
+                onChange={(value) => setHeaderData({ ...headerData, INWARDED_BY: value })}
               />
               <TextField
                 label="Remarks"
                 value={headerData.REMARKS}
+                readOnly
+                onChange={(value) => setHeaderData({ ...headerData, REMARKS: value })}
               />
             </div>
           </FormSection>
 
-          {/* Vendor/Reference Details */}
-          <FormSection title="Reference Details">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <TextField label="PO Number" value={headerData.poNumber} readOnly />
-              <TextField label="Vendor Number" value={headerData.vendorNumber} readOnly />
-              <TextField label="Vendor Name" value={headerData.vendorName} readOnly />
-              <TextField label="Inwarded By" value={headerData.inwardedBy} readOnly />
-            </div>
-          </FormSection>
+          {/* Only show "Reference Details" if NOT in PO Mode */}
+          {/* Only show "Reference Details" if type is exactly PO */}
+          {refDocType === "PO" && (
+            <FormSection title="Reference Details">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <TextField label="PO Number" readOnly value={headerData.PONO} />
+                <TextField label="Vendor Number" readOnly value={headerData.VENDOR} />
+                <TextField label="Vendor Name" readOnly value={headerData.VNAME} />
+              </div>
+            </FormSection>
+          )}
 
           {/* Item Grid */}
-          <FormSection title="Item Details">
-            <DataGrid
-              columns={columns}
-              data={items}
-              editable={true}
-              minRows={1}
-              maxHeight="350px"
-              itemsPerPage={10}
-            />
+          <FormSection title="Item Details"
+          >
+            {/* Add Row Button */}
+
+
+            <div className="border rounded-md">
+              <div className="overflow-auto scrollbar-thin" style={{ maxHeight: '400px' }}>
+                <table className="w-full border-collapse text-sm">
+                  <thead className="bg-muted sticky top-0 z-10">
+                    <tr>
+                      {/* <th className="p-2 border w-10">
+                        <input
+                          type="checkbox"
+                          checked={items.length > 0 && items.every(i => i.CHK === 'X')}
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            setItems(prev => prev.map(item => ({ ...item, CHK: checked ? 'X' : '' })));
+                          }}
+                        />
+                      </th> */}
+                      <th className="w-16 text-center">Item</th>
+                      <th className="p-2 border w-32">Material Code</th>
+                      <th className="p-2 border w-60">Material Description</th>
+                      {/* Logic for Qty/Unit Columns */}
+                      {/* PO Qty & PO Unit → show for PO and SUB */}
+                      {["PO", "SUB"].includes(refDocType) && (
+                        <>
+                          <th className="p-2 border w-24">PO Qty</th>
+                          <th className="p-2 border w-24">PO Unit</th>
+                        </>
+                      )}
+
+                      {/* Quantity → show for PO and others (NOT SUB-only logic) */}
+
+                      {["PO"].includes(refDocType) && (
+                        <>
+                          <th className="p-2 border w-24">Quantity</th>
+
+                        </>
+                      )}
+                      {["WOREF"].includes(refDocType) && (
+                        <>
+                          <th className="p-2 border w-24">Quantity</th>
+                          <th className="p-2 border w-24">Unit</th>
+                        </>
+                      )}
+                      {/* Logic for Vendor Columns: Show for SUB and WOREF */}
+                      {["SUB", "WOREF"].includes(refDocType) && (
+                        <>
+                          <th className="p-2 border w-40">Vendor</th>
+                          <th className="p-2 border w-40">Vendor Name</th>
+                        </>
+                      )}
+                      <th className="p-2 border w-40">Packing Condition</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map((item, index) => (
+                      <tr key={index} className="hover:bg-muted/50">
+                        {/* Checkbox */}
+                        {/* <td className="p-2 border text-center">
+                          <input
+                            type="checkbox"
+                            checked={item.CHK === 'X'}
+                            onChange={(e) => handleItemChange(index, 'CHK', e.target.checked ? 'X' : '')}
+                          />
+                        </td> */}
+
+                        <td className='p-3 border'>{item.ITEM}</td>
+                        <td className='p-3 border'>{item.MATNR}</td>
+
+                        <td className='p-3 border'>{item.MAKTX}</td>
+
+                        {/* PO Qty & PO Unit */}
+                        {["PO", "SUB"].includes(refDocType) && (
+                          <>
+                            <td className='p-3 border'>{item.CHQTY}</td>
+                            <td className='p-3 border'>{item.CHUOM}</td>
+
+                          </>
+                        )}
+
+
+
+                        {/* Quantity & Unit */}
+                        {["PO"].includes(refDocType) && (
+                          <>
+                            <td className='p-3 border'>{item.ZQUANT}</td>
+
+
+                          </>
+                        )}
+                        {["WOREF"].includes(refDocType) && (
+                          <>
+                            <td className='p-3 border'>{item.ZQUANT}</td>
+                            <td className='p-3 border'> {item.ZMEINS}</td>
+
+
+                          </>
+                        )}
+
+                        {/* Vendor Inputs: Show for SUB and WOREF */}
+                        {["SUB", "WOREF"].includes(refDocType) && (
+                          <>
+                            <td className='p-3 border'>{item.CVNO}</td>
+                            <td className='p-3 border'>{item.CVNAME}</td>
+
+                          </>
+                        )}
+
+                        {/* Packing Condition */}
+                        <td className='p-3 border'>{item.ZPACKING}</td>
+
+
+
+
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+
           </FormSection>
 
           {/* Audit Information */}

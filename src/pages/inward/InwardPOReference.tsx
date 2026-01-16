@@ -65,10 +65,10 @@ interface ItemRow {
 
 export default function InwardPOReference() {
   const { webUser } = useAuth();
- const [userPlant, setPlant] = useState('');
+  const [userPlant, setPlant] = useState('');
   const [headerData, setHeaderData] = useState({
     WERKS: '',
-    
+
     VHDAT_IN: new Date().toISOString().split('T')[0],
     VHTIM_IN: new Date().toTimeString().slice(0, 8),
     VHNO: '',
@@ -139,12 +139,12 @@ export default function InwardPOReference() {
   });
 
   useEffect(() => {
-      const loggedInDetails = localStorage.getItem('gate_entry_user');
-    
+    const loggedInDetails = localStorage.getItem('gate_entry_user');
+
     const SelectedPlant = localStorage.getItem('SelectedPlant');
-    console.log("SelectedPlant",SelectedPlant)
-    headerData.WERKS =SelectedPlant
-    setHeaderData(prev => ({ ...prev, INWARDED_BY: webUser}));
+    console.log("SelectedPlant", SelectedPlant)
+    headerData.WERKS = SelectedPlant
+    setHeaderData(prev => ({ ...prev, INWARDED_BY: webUser }));
   }, [webUser]);
 
   const [items, setItems] = useState<ItemRow[]>([]);
@@ -180,7 +180,7 @@ export default function InwardPOReference() {
         "GENO": " ", //Gate Entry Number
         "WERKS": headerData.WERKS, //Plant       "//Mandatory
         "VHDAT_IN": new Date().toISOString().split('T')[0], //Vehicle IN Date    //System Generated
-        "VHTIM_IN": new Date().toTimeString().slice(0, 5), //Vehicle IN time        //System Generated
+        "VHTIM_IN": new Date().toTimeString().slice(0, 8), //Vehicle IN time        //System Generated
         "USR_IN": "",
         "VHNO": "", //Vehicle Number          //Mandatory
         "GRWGT": "",
@@ -404,9 +404,19 @@ export default function InwardPOReference() {
       });
       return;
     }
+
     headerData.REFDOCTYP = "PO"
     headerData.DTYPE = "IN"
-    headerData.ERNAM = webUser
+    // 1. Get the string from storage
+    const storedDetails = localStorage.getItem('gate_entry_user');
+
+    // 2. Parse it back into an object if it exists
+    if (storedDetails) {
+      const loggedInDetails = JSON.parse(storedDetails);
+
+      // 3. Now you can access the property safely
+      headerData.ERNAM = loggedInDetails.USER;
+    }
     const payload = {
       CREATE: "X",
       CHANGE: "",
@@ -489,7 +499,7 @@ export default function InwardPOReference() {
       WERKS: '',
       DTYPE: 'Inward Process',
       "VHDAT_IN": new Date().toISOString().split('T')[0], //Vehicle IN Date    //System Generated
-      "VHTIM_IN": new Date().toTimeString().slice(0, 5), //Vehicle IN time  
+      "VHTIM_IN": new Date().toTimeString().slice(0, 8), //Vehicle IN time  
       VHNO: '',
       VHCL_TYPE: '',
       DRNAM: '',
@@ -849,7 +859,7 @@ export default function InwardPOReference() {
             placeholder="+91 98765 43210"
           />
 
-            <TextField
+          <TextField
             label="Transporter Name"
             required
             placeholder="Enter Transporter Name"

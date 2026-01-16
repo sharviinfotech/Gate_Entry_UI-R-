@@ -13,7 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { format, subDays, startOfMonth, startOfYear, startOfWeek, endOfWeek } from 'date-fns';
-
+import { createPortal } from 'react-dom';
+import { useEffect } from 'react';
 
 import {
   BarChart,
@@ -77,14 +78,13 @@ const transformApiData = (apiData: any[]) => {
     refDocType: item.REFDOCTYP || '',
     vehicleType: item.VHCL_TYPE || '',
     grLrNum: item.GR_LR_NUM || '',
-    inwardedBy: item.INWARDED_BY || '',
     poNo: item.EBELN || '',
     invoiceNo: item.INVNO || '',
     itemNo: item.ITEM || '',
     materialCode: item.MATNR || '',
     materialDesc: item.MAKTX || '',
-    quantity: parseFloat(item.CHQTY) || 0,
-    unit: item.CHUOM || '',
+    poQuantity: item.CHQTY || 0,
+    poUnit: item.CHUOM || '',
     vendorNo: item.CVNO || '',
     vendorName: item.CVNAME || '',
     vendorNo1: item.CVNO1 || '',
@@ -96,8 +96,8 @@ const transformApiData = (apiData: any[]) => {
     packing: item.ZPACKING || '',
     purpose: item.PURPOSE || '',
     remarks: item.REMARKS || '',
-    vehicleExit: item.GEEXT === 'X',
-    cancelled: item.GECAN === 'X',
+    vehicleExit: item.GEEXT,
+    cancelled: item.GECAN,
     lcDate: item.LCDAT || '',
     mblnr: item.MBLNR1 || '',
     blDate: item.BLDAT || '',
@@ -163,9 +163,23 @@ export default function Reports() {
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const itemsPerPage = 10;
+  const [listofPlants, setlistofPlants] = useState<any[]>([])
 
 
+  useEffect(() => {
 
+    const loggedInDetails = JSON.parse(localStorage.getItem('gate_entry_user'))
+    console.log("loggedInDetails", loggedInDetails);
+
+    const listofPlants = loggedInDetails.PLANTS.filter((plant) => plant.PLANT).map((item) => item.PLANT);
+    setlistofPlants(listofPlants)
+    console.log('listofPlants', listofPlants)
+    // This will create an array like ["3601", "3602", "3604", "3608", "3610"]
+    // const plantIdsOnly = listofPlants.map(item => item.PLANT);
+
+    // console.log('plantIdsOnly', plantIdsOnly);
+
+  }, [])
   // Apply date preset
   const applyDatePreset = (preset: typeof DATE_PRESETS[0]) => {
     const { from, to } = preset.getValue();
@@ -181,7 +195,7 @@ export default function Reports() {
     vehiclesExited: results.filter(r => r.vehicleExit).length,
     vehiclesPending: results.filter(r => !r.vehicleExit && !r.cancelled).length,
     cancelledEntries: results.filter(r => r.cancelled).length,
-    totalQuantity: results.reduce((sum, r) => sum + r.quantity, 0),
+    totalQuantity: results.reduce((sum, r) => sum + r.poQuantity, 0),
   }), [results]);
 
   // Chart data
@@ -394,8 +408,8 @@ export default function Reports() {
       { key: 'materialDesc', header: 'Material Description' },
       { key: 'vendorNo', header: 'Vendor No' },
       { key: 'vendorName', header: 'Vendor Name' },
-      { key: 'quantity', header: 'Quantity' },
-      { key: 'unit', header: 'Unit' },
+      { key: 'poQuantity', header: 'Quantity' },
+      { key: 'poUnit', header: 'Unit' },
       { key: 'salesOrg', header: 'Sales Org' },
       { key: 'invoiceNo', header: 'Invoice No' },
       { key: 'webUser', header: 'Web User' },
@@ -440,9 +454,26 @@ export default function Reports() {
     }
     return null;
   };
+  const FullScreenLoader = () => {
+    // We create the element to be teleported
+    const loaderContent = (
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div className="flex flex-col items-center gap-4 p-6 bg-white/10 rounded-lg border border-white/20">
+          <div className="w-12 h-12 border-4 border-t-blue-500 border-white/20 rounded-full animate-spin" />
+          <p className="text-white font-medium text-lg tracking-wide">
+            Please Wait Loading...
+          </p>
+        </div>
+      </div>
+    );
+
+    // We render it into the body instead of the local component tree
+    return createPortal(loaderContent, document.body);
+  };
 
   return (
     <div className="space-y-6">
+      {isLoading && <FullScreenLoader />}
       <PageHeader
         title="Report Analysis"
         subtitle="Advanced analytics and reporting dashboard"
@@ -563,8 +594,11 @@ export default function Reports() {
                         <SelectValue placeholder="From" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="3601">3601</SelectItem>
-                        <SelectItem value="3602">3602</SelectItem>
+                        {listofPlants.map((opt) => (
+                          <SelectItem key={opt} value={opt}>
+                            {opt}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <span className="text-muted-foreground text-sm">→</span>
@@ -573,8 +607,11 @@ export default function Reports() {
                         <SelectValue placeholder="To" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="3601">3601</SelectItem>
-                        <SelectItem value="3602">3602</SelectItem>
+                        {listofPlants.map((opt) => (
+                          <SelectItem key={opt} value={opt}>
+                            {opt}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -999,18 +1036,40 @@ export default function Reports() {
                       <th className="whitespace-nowrap">Gate Entry No</th>
                       <th className="whitespace-nowrap">Plant</th>
                       <th className="whitespace-nowrap">Type</th>
-                      <th className="whitespace-nowrap">Vehicle Date</th>
-                      <th className="whitespace-nowrap">Vehicle No</th>
+                      <th className="whitespace-nowrap">Vehicle In Date</th>
+                      <th className="whitespace-nowrap">Vehicle In Time</th>
+                      <th className="whitespace-nowrap">Vehicle Out Date</th>
+                      <th className="whitespace-nowrap">Vehicle Out Time</th>
+
                       <th className="whitespace-nowrap">Driver</th>
-                      <th className="whitespace-nowrap">Transporter</th>
+                      <th className="whitespace-nowrap">Driver Contact</th>
+                      <th className="whitespace-nowrap">Vehicle No</th>
+                      <th className="whitespace-nowrap">Vehicle Type</th>
                       <th className="whitespace-nowrap">Ref Type</th>
-                      <th className="whitespace-nowrap">PO No</th>
+                      <th className="whitespace-nowrap">GR / LR Number</th>
+
+                      <th className="whitespace-nowrap">Purchase Order No</th>
+                      <th className="whitespace-nowrap">Gate Entry Item</th>
+
                       <th className="whitespace-nowrap">Material</th>
+                      <th className="whitespace-nowrap">Material Des</th>
                       <th className="whitespace-nowrap">Vendor</th>
-                      <th className="whitespace-nowrap">Qty</th>
-                      <th className="whitespace-nowrap">Entered By</th>
+                      <th className="whitespace-nowrap">Vendor Name</th>
+                      <th className="whitespace-nowrap">Po Quantity</th>
+                      <th className="whitespace-nowrap">Po Unit</th>
+                      <th className="whitespace-nowrap">Quantity</th>
+                      <th className="whitespace-nowrap">Unit of Measure</th>
+                      <th className="whitespace-nowrap">Packing Condition</th>
+                      <th className="whitespace-nowrap">Remarks</th>
+
+
                       <th className="whitespace-nowrap">Exit</th>
-                      <th className="whitespace-nowrap">Status</th>
+                      <th className="whitespace-nowrap">Gate Entry Cancelled</th>
+                      <th className="whitespace-nowrap">Cancellation Date</th>
+                      <th className="whitespace-nowrap">Material Document No</th>
+                      <th className="whitespace-nowrap">Document Date</th>
+                      <th className="whitespace-nowrap">Inwarded By</th>
+
                     </tr>
                   </thead>
                   <tbody>
@@ -1026,31 +1085,52 @@ export default function Reports() {
                             </span>
                           </td>
                           <td className="whitespace-nowrap">{r.vehicleDate}</td>
-                          <td className="whitespace-nowrap">{r.vehicleNo}</td>
+                          <td className="whitespace-nowrap">{r.vehicleTime}</td>
+                          <td className="whitespace-nowrap">{r.vehicleOutDate}</td>
+                          <td className="whitespace-nowrap">{r.vehicleOutTime}</td>
                           <td>{r.driverName}</td>
-                          <td>{r.transporterName}</td>
+                          <td>{r.driverNumber}</td>
+                          <td className="whitespace-nowrap">{r.vehicleNo}</td>
+
+                          <td>{r.vehicleType}</td>
                           <td title={getRefDocTypeName(r.refDocType)}>{getRefDocTypeName(r.refDocType)}</td>
+                          <td>{r.grLrNum || '-'}</td>
+
                           <td>{r.poNo || '-'}</td>
-                          <td className="max-w-[150px] truncate" title={r.materialDesc}>{r.materialDesc}</td>
-                          <td className="max-w-[150px] truncate" title={r.vendorName}>{r.vendorName}</td>
-                          <td>{r.quantity} {r.unit}</td>
-                          <td className="whitespace-nowrap">{r.webUser}</td>
+                          <td>{r.itemNo || '-'}</td>
+                          <td>{r.materialCode}</td>
+                          <td className="whitespace-nowrap">{r.materialDesc}</td>
+                          <td>{r.vendorNo}</td>
+                          <td className="whitespace-nowrap">{r.vendorName}</td>
+                          <td>{r.poQuantity}</td>
+                          <td>{r.poUnit}</td>
+                          <td>{r.zQuantity}</td>
+                          <td>{r.zUnit}</td>
+                          <td>{r.packing}</td>
+                          <td>{r.remarks}</td>
+
+
+
                           <td>
                             {r.vehicleExit ? (
                               <CheckCircle className="w-4 h-4 text-success" />
                             ) : (
-                              <Clock className="w-4 h-4 text-warning" />
+                              "-"
                             )}
                           </td>
                           <td>
                             {r.cancelled ? (
-                              <span className="badge-status bg-destructive/10 text-destructive">Cancelled</span>
-                            ) : r.vehicleExit ? (
-                              <span className="badge-status badge-success">Completed</span>
+                              <span className="badge-status bg-destructive/10 text-destructive">
+                                Cancelled
+                              </span>
                             ) : (
-                              <span className="badge-status badge-warning">Active</span>
+                              "-"
                             )}
                           </td>
+                          <td>{r.lcDate}</td>
+                          <td>{r.mblnr}</td>
+                          <td>{r.blDate}</td>
+                          <td className="whitespace-nowrap">{r.webUser}</td>
                         </tr>
                       ))}
                   </tbody>
@@ -1165,7 +1245,7 @@ export default function Reports() {
                         { key: 'vehicleNo', header: 'Vehicle No' },
                         { key: 'refDocType', header: 'Ref Doc Type' },
                         { key: 'vendorName', header: 'Vendor Name' },
-                        { key: 'quantity', header: 'Quantity' },
+                        { key: 'poQuantity', header: 'Po Quantity' },
                       ];
                       exportToExcel(drillDown.data, columns, drillDown.title.replace(/\s+/g, '_'));
                       toast.success('Exported to Excel');
@@ -1209,7 +1289,7 @@ export default function Reports() {
                     <td className="p-3 whitespace-nowrap">{r.vehicleNo}</td>
                     <td className="p-3">{getRefDocTypeName(r.refDocType)}</td>
                     <td className="p-3 max-w-[200px] truncate" title={r.vendorName}>{r.vendorName}</td>
-                    <td className="p-3">{r.quantity} {r.unit}</td>
+                    <td className="p-3">{r.poQuantity} {r.poUnit}</td>
                     <td className="p-3">
                       {r.cancelled ? (
                         <span className="badge-status bg-destructive/10 text-destructive">Cancelled</span>

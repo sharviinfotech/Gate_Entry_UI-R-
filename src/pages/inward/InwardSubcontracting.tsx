@@ -146,13 +146,13 @@ const fetchPOData = (poNumber: string) => {
 export default function InwardSubcontracting() {
   const { webUser } = useAuth();
   const [vendorList, setVendorList] = useState<any[]>([]);
-   const [userPlant, setPlant] = useState('');
+  const [userPlant, setPlant] = useState('');
   const [headerData, setHeaderData] = useState({
     WERKS: '',
     REFDOCTYP: 'Subcontracting',
-      DTYPE: 'Inward Process',
+    DTYPE: 'Inward Process',
     VHDAT_IN: new Date().toISOString().split('T')[0],
-    VHTIM_IN: new Date().toTimeString().slice(0, 5),
+    VHTIM_IN: new Date().toTimeString().slice(0, 8),
     VHNO: '',
     VHCL_TYPE: '',
     DRNAM: '',
@@ -227,8 +227,8 @@ export default function InwardSubcontracting() {
     };
     const loggedInDetails = localStorage.getItem('gate_entry_user');
     const SelectedPlant = localStorage.getItem('SelectedPlant');
-    console.log("SelectedPlant",SelectedPlant)
-    headerData.WERKS =SelectedPlant
+    console.log("SelectedPlant", SelectedPlant)
+    headerData.WERKS = SelectedPlant
 
     fetchVendors();
   }, []);
@@ -417,7 +417,16 @@ export default function InwardSubcontracting() {
     }
     headerData.REFDOCTYP = "SUB"
     headerData.DTYPE = "IN"
-    headerData.ERNAM = webUser
+    // 1. Get the string from storage
+    const storedDetails = localStorage.getItem('gate_entry_user');
+
+    // 2. Parse it back into an object if it exists
+    if (storedDetails) {
+      const loggedInDetails = JSON.parse(storedDetails);
+
+      // 3. Now you can access the property safely
+      headerData.ERNAM = loggedInDetails.USER;
+    }
     const payload = {
       CREATE: "X",
       CHANGE: "",
@@ -501,7 +510,7 @@ export default function InwardSubcontracting() {
       REFDOCTYP: 'Subcontracting',
       DTYPE: 'Inward Process',
       "VHDAT_IN": new Date().toISOString().split('T')[0], //Vehicle IN Date    //System Generated
-      "VHTIM_IN": new Date().toTimeString().slice(0, 5), //Vehicle IN time  
+      "VHTIM_IN": new Date().toTimeString().slice(0, 8), //Vehicle IN time  
       VHNO: '',
       VHCL_TYPE: '',
       DRNAM: '',

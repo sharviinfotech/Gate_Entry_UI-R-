@@ -19,7 +19,7 @@ export default function VehicleExit() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [exitConfirmed, setExitConfirmed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-   const { webUser } = useAuth();
+  const { webUser } = useAuth();
 
   // Gate Entry Header (read-only, fetched from system)
   const [headerData, setHeaderData] = useState({
@@ -35,7 +35,7 @@ export default function VehicleExit() {
   // Exit Details (editable)
   const [exitData, setExitData] = useState({
     LEDAT: new Date().toISOString().split('T')[0],
-    LETIM: new Date().toTimeString().slice(0, 5),
+    LETIM: new Date().toTimeString().slice(0, 8),
     SGTXT: '',
   });
 
@@ -45,15 +45,15 @@ export default function VehicleExit() {
       return;
     }
     if (gateEntryNo.length !== 10) {
-               Swal.fire({
-                    title: "warning",
-                    text:"Gate Entry Number Should be 10 Digits Only",
-                    icon: "warning",
-                    confirmButtonColor: "#f0ad4e",
-                  });
-              return;
-            }
-setIsLoading(true);
+      Swal.fire({
+        title: "warning",
+        text: "Gate Entry Number Should be 10 Digits Only",
+        icon: "warning",
+        confirmButtonColor: "#f0ad4e",
+      });
+      return;
+    }
+    setIsLoading(true);
     try {
       const payload = {
         EXIT_GE: gateEntryNo,
@@ -78,7 +78,7 @@ setIsLoading(true);
             icon: "success",
             confirmButtonColor: "#3085d6",
           });
-           setHeaderData({
+          setHeaderData({
             GENO: '',
             WERKS: '',
             VHDAT_IN: '',
@@ -96,7 +96,7 @@ setIsLoading(true);
             icon: "error",
             confirmButtonColor: "#d33",
           });
-           setHeaderData({
+          setHeaderData({
             GENO: '',
             WERKS: '',
             VHDAT_IN: '',
@@ -105,10 +105,10 @@ setIsLoading(true);
             DRNAM: '',
             INWARDED_BY: '',
           });
-          
+
           return
         }
-        
+
       } else {
         setHeaderData({
           GENO: response.GENO,
@@ -135,7 +135,7 @@ setIsLoading(true);
     } catch (err) {
       console.error(err);
       toast.error("Failed to load Data");
-    }finally{
+    } finally {
       setIsLoading(false);
     }
   };
@@ -149,8 +149,18 @@ setIsLoading(true);
       toast.error('Please confirm Gate Entry Exit by enabling the checkbox');
       return;
     }
-setIsLoading(true);
+    setIsLoading(true);
     try {
+      const storedDetails = localStorage.getItem('gate_entry_user');
+
+      // 2. Parse it back into an object if it exists
+      let LEUSR
+      if (storedDetails) {
+        const loggedInDetails = JSON.parse(storedDetails);
+
+        // 3. Now you can access the property safely
+        LEUSR = loggedInDetails.USER;
+      }
       const payload = {
         "EXIT_CANCEL": {
           "GENO": headerData.GENO,
@@ -167,7 +177,7 @@ setIsLoading(true);
           "SGTXT": exitData.SGTXT, //exit
           "INWARDED_BY": headerData.GENO, //exit
           "GECAN": "",   //Cancel check
-          "LEUSR":webUser,
+          "LEUSR": LEUSR,
           "GEEXT": "X" //exit check
         }
       }
@@ -202,7 +212,7 @@ setIsLoading(true);
     }
     catch (error) {
       console.log("error")
-    }finally{
+    } finally {
       setIsLoading(false);
     }
 
@@ -210,21 +220,21 @@ setIsLoading(true);
   };
 
   const FullScreenLoader = () => {
-      // We create the element to be teleported
-      const loaderContent = (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="flex flex-col items-center gap-4 p-6 bg-white/10 rounded-lg border border-white/20">
-            <div className="w-12 h-12 border-4 border-t-blue-500 border-white/20 rounded-full animate-spin" />
-            <p className="text-white font-medium text-lg tracking-wide">
-              Please Wait Loading...
-            </p>
-          </div>
+    // We create the element to be teleported
+    const loaderContent = (
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div className="flex flex-col items-center gap-4 p-6 bg-white/10 rounded-lg border border-white/20">
+          <div className="w-12 h-12 border-4 border-t-blue-500 border-white/20 rounded-full animate-spin" />
+          <p className="text-white font-medium text-lg tracking-wide">
+            Please Wait Loading...
+          </p>
         </div>
-      );
-  
-      // We render it into the body instead of the local component tree
-      return createPortal(loaderContent, document.body);
-    };
+      </div>
+    );
+
+    // We render it into the body instead of the local component tree
+    return createPortal(loaderContent, document.body);
+  };
   return (
     <div className="space-y-6">
       {isLoading && <FullScreenLoader />}

@@ -278,7 +278,7 @@ export default function ChangeEntry() {
             "LCTIM": "00:00:00",
             "LCUSR": "",
             "SCTXT": "",
-            "ERNAM": "",
+            "ERNAM":headerResponse.ERNAM,
             "LIFNR": "",
             "GATEPASS": "",
             "DESTINATION": "",
@@ -397,7 +397,15 @@ export default function ChangeEntry() {
       return;
     }
     toast.success('Gate Entry updated successfully!');
-    headerData.USR_IN = webUser
+     const storedDetails = localStorage.getItem('gate_entry_user');
+
+    // 2. Parse it back into an object if it exists
+    if (storedDetails) {
+      const loggedInDetails = JSON.parse(storedDetails);
+
+      // 3. Now you can access the property safely
+      headerData.USR_IN = loggedInDetails.USER;
+    }
     const payload = {
       "CREATE": "",
       "CHANGE": "X",
