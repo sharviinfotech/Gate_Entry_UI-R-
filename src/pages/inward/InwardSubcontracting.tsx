@@ -305,6 +305,36 @@ export default function InwardSubcontracting() {
 
     console.log("handleItemChange Items", items)
   };
+  const fetchVendorName = async (vendorCode, index) => {
+    if (!vendorCode) return;
+    setIsLoading(true);
+    try {
+
+      let payload = {
+        "VENDOR": vendorCode
+      }
+
+      const response = await service.VendorName(payload);
+
+
+
+      if (response?.VEN_NAME) {
+        setItems(prev => {
+          const updated = [...prev];
+          updated[index] = {
+            ...updated[index],
+            CVNAME: response.VEN_NAME,
+          };
+          return updated;
+        });
+      }
+    } catch (err) {
+      console.error("Vendor fetch failed", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
 
   const handleAddRow = () => {
     setItems(prev => {
@@ -797,7 +827,7 @@ export default function InwardSubcontracting() {
         </div>
         <div className="data-grid">
           <div className="overflow-auto scrollbar-thin" style={{ maxHeight: '400px' }}>
-            <table className="w-full border-collapse">
+            <table className="w-full border-collapse table-fixed text-sm">
               <thead className="bg-muted">
                 <tr>
                   <th className="w-10 text-center">
@@ -816,13 +846,13 @@ export default function InwardSubcontracting() {
                     />
                   </th>
 
-                  <th className="w-16 text-center">Item</th>
+                  <th className="w-20 text-center">Item</th>
                   <th className="w-32">Material Code</th>
                   <th className="w-60">Material Description</th>
                   <th className="w-24 text-center">PO Qty</th>
                   <th className="w-24 text-center">PO Unit</th>
                   <th className="w-32">Vendor</th>
-                  <th className="w-40">Vendor Name</th>
+                  <th style={{ width: '250px' }}>Vendor Name</th>
                   <th className="w-40">Packing Condition</th>
                   <th className="w-16 text-center">Action</th>
                 </tr>
@@ -905,24 +935,37 @@ export default function InwardSubcontracting() {
                       </td>
 
                       {/* Vendor */}
-                      <td>
-                        <Input
-                          value={item.CVNO}
-                          onChange={(e) =>
-                            handleItemChange(actualIndex, 'CVNO', e.target.value)
-                          }
-                          className="h-8"
-                        />
+                      <td className="px-1 py-1">
+                        <div className="flex items-center gap-1 w-full">
+                          <Input
+                            value={item.CVNO}
+                            onChange={(e) =>
+                              handleItemChange(actualIndex, 'CVNO', e.target.value)
+                            }
+                           className="h-8 w-full px-2"
+                          />
+
+                          <button
+                            type="button"
+                            onClick={() => fetchVendorName(item.CVNO, actualIndex)}
+                            className="h-4 w-4 shrink-0 border rounded flex items-center justify-center hover:bg-gray-100"
+                            title="Search Vendor"
+                          >
+                            🔍
+                          </button>
+                          </div>
+                        
                       </td>
 
                       {/* Vendor Name */}
                       <td>
                         <Input
                           value={item.CVNAME}
-                          onChange={(e) =>
-                            handleItemChange(actualIndex, 'CVNAME', e.target.value)
-                          }
-                          className="h-8"
+                          disabled
+                          // onChange={(e) =>
+                          //   handleItemChange(actualIndex, 'CVNAME', e.target.value)
+                          // }
+                       className="h-8 w-full bg-muted/50"
                         />
                       </td>
 

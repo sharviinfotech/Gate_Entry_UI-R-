@@ -170,7 +170,14 @@ const backendNodejs = {
         });
         return res.json();
     },
-
+   VendorName: async (data) => {
+        const res = await fetch(`${BASE_URL}api/external/Gate_Entry/FetchVendorName`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+        });
+        return res.json();
+    },
 
 };
 

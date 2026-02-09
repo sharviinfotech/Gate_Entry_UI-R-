@@ -311,7 +311,35 @@ export default function ChangeEntry() {
 
 
   };
-
+ const fetchVendorName = async (vendorCode, index) => {
+      if (!vendorCode) return;
+      setIsLoading(true);
+      try {
+  
+        let payload = {
+          "VENDOR": vendorCode
+        }
+  
+        const response = await service.VendorName(payload);
+  
+  
+  
+        if (response?.VEN_NAME) {
+          setItems(prev => {
+            const updated = [...prev];
+            updated[index] = {
+              ...updated[index],
+              CVNAME: response.VEN_NAME,
+            };
+            return updated;
+          });
+        }
+      } catch (err) {
+        console.error("Vendor fetch failed", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
   const handleItemChange = (
     index: number,
     field: keyof ItemRow,
@@ -925,7 +953,7 @@ export default function ChangeEntry() {
 
             <div className="border rounded-md">
               <div className="overflow-auto scrollbar-thin" style={{ maxHeight: '400px' }}>
-                <table className="w-full border-collapse text-sm">
+                <table className="w-full border-collapse table-fixed text-sm">
                   <thead className="bg-muted sticky top-0 z-10">
                     <tr>
                       <th className="p-2 border w-10">
@@ -968,7 +996,7 @@ export default function ChangeEntry() {
                       {["SUB", "WOREF"].includes(refDocType) && (
                         <>
                           <th className="p-2 border w-40">Vendor</th>
-                          <th className="p-2 border w-40">Vendor Name</th>
+                          <th style={{width:'250px'}}>Vendor Name</th>
                         </>
                       )}
                       <th className="p-2 border w-40">Packing Condition</th>
@@ -1082,8 +1110,42 @@ export default function ChangeEntry() {
                         {/* Vendor Inputs: Show for SUB and WOREF */}
                         {["SUB", "WOREF"].includes(refDocType) && (
                           <>
-                            <td className="p-2 border"><Input value={item.CVNO} onChange={(e) => handleItemChange(index, 'CVNO', e.target.value)} className="h-8" /></td>
-                            <td className="p-2 border"><Input value={item.CVNAME} onChange={(e) => handleItemChange(index, 'CVNAME', e.target.value)} className="h-8" /></td>
+
+                            <td className="px-1 py-1 border">
+                        <div className="flex items-center gap-1 w-full">
+                          <Input
+                            value={item.CVNO}
+                            onChange={(e) =>
+                              handleItemChange(index, 'CVNO', e.target.value)
+                            }
+                           className="h-8 w-full px-2"
+                          />
+
+                          <button
+                            type="button"
+                            onClick={() => fetchVendorName(item.CVNO, index)}
+                            className="h-4 w-4 shrink-0 border rounded flex items-center justify-center hover:bg-gray-100"
+                            title="Search Vendor"
+                          >
+                            🔍
+                          </button>
+                          </div>
+                        
+                      </td>
+
+                      {/* Vendor Name */}
+                      <td className="p-2 border">
+                        <Input
+                          value={item.CVNAME}
+                          disabled
+                          // onChange={(e) =>
+                          //   handleItemChange(actualIndex, 'CVNAME', e.target.value)
+                          // }
+                       className="h-8 w-full bg-muted/50"
+                        />
+                      </td>
+                            {/* <td className="p-2 border"><Input value={item.CVNO} onChange={(e) => handleItemChange(index, 'CVNO', e.target.value)} className="h-8" /></td>
+                            <td className="p-2 border"><Input value={item.CVNAME} onChange={(e) => handleItemChange(index, 'CVNAME', e.target.value)} className="h-8" /></td> */}
                           </>
                         )}
 
