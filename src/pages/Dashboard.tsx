@@ -27,6 +27,8 @@ import { PageHeader } from '@/components/shared/PageHeader';
 import { ModuleCard } from '@/components/shared/ModuleCard';
 import { StatCard } from '@/components/shared/StatCard';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import service from "../services/generalservice.js";
 import {
   BarChart,
   Bar,
@@ -44,12 +46,12 @@ import {
 } from 'recharts';
 
 // Enhanced stats for Purchase & Plant
-const stats = [
-  { title: "Today's Inward", value: 24, icon: ArrowDownToLine, trend: { value: 12, isPositive: true }, color: 'accent' as const, path: '/inward/po-reference' },
-  { title: "Today's Outward", value: 18, icon: ArrowUpFromLine, trend: { value: 8, isPositive: true }, color: 'info' as const, path: '/outward/billing-reference' },
-  { title: 'Pending Exit', value: 7, icon: Clock, color: 'warning' as const, path: '/vehicle-exit' },
-  { title: 'Total Vehicles', value: 156, icon: Truck, trend: { value: 5, isPositive: true }, color: 'primary' as const, path: '/reports' },
-];
+// const stats = [
+//   { title: "Today's Inward", value: 24, icon: ArrowDownToLine, trend: { value: 12, isPositive: true }, color: 'accent' as const, path: '/inward/po-reference' },
+//   { title: "Today's Outward", value: 18, icon: ArrowUpFromLine, trend: { value: 8, isPositive: true }, color: 'info' as const, path: '/outward/billing-reference' },
+//   { title: 'Pending Exit', value: 7, icon: Clock, color: 'warning' as const, path: '/vehicle-exit' },
+//   { title: 'Total Vehicles', value: 156, icon: Truck, trend: { value: 5, isPositive: true }, color: 'primary' as const, path: '/reports' },
+// ];
 
 const modules = [
   {
@@ -86,12 +88,7 @@ const modules = [
   },
 ];
 
-const recentEntries = [
-  { id: 'GE-2024-001', type: 'Inward', vendor: 'ABC Suppliers', vehicle: 'MH-12-AB-1234', time: '10:30 AM', status: 'Active', plant: '3601', refType: 'PO' },
-  { id: 'GE-2024-002', type: 'Outward', vendor: 'XYZ Trading', vehicle: 'MH-14-CD-5678', time: '11:15 AM', status: 'Exited', plant: '3601', refType: 'SO' },
-  { id: 'GE-2024-003', type: 'Inward', vendor: 'PQR Industries', vehicle: 'MH-04-EF-9012', time: '12:00 PM', status: 'Active', plant: '3602', refType: 'PO' },
-  { id: 'GE-2024-004', type: 'Inward', vendor: 'LMN Enterprises', vehicle: 'MH-20-GH-3456', time: '01:45 PM', status: 'Active', plant: '3601', refType: 'SUB' },
-];
+
 
 const welcomeThemes = [
   { name: 'Teal', gradient: 'from-accent via-accent/90 to-primary' },
@@ -157,6 +154,51 @@ const topUsersData = [
 ];
 
 export default function Dashboard() {
+
+    const [dashboardStats, setDashboardStats] = useState({
+    CUR_INW: 0,
+    CUR_OUT: 0,
+    PEND_EX: 0,
+    TOT_VEH: 0,
+  });
+
+  // ✅ Dynamic Stats from API
+const stats = useMemo(() => [
+  {
+    title: "Today's Inward",
+    value: dashboardStats.CUR_INW,
+    icon: ArrowDownToLine,
+    color: 'accent' as const,
+    path: '/inward/po-reference',
+  },
+  {
+    title: "Today's Outward",
+    value: dashboardStats.CUR_OUT,
+    icon: ArrowUpFromLine,
+    color: 'info' as const,
+    path: '/outward/billing-reference',
+  },
+  {
+    title: 'Pending Exit',
+    value: dashboardStats.PEND_EX,
+    icon: Clock,
+    color: 'warning' as const,
+    path: '/vehicle-exit',
+  },
+  {
+    title: 'Total Vehicles',
+    value: dashboardStats.TOT_VEH,
+    icon: Truck,
+    color: 'primary' as const,
+    path: '/reports',
+  },
+], [dashboardStats]);
+
+
+  const [recentEntries, setRecentEntries] = useState<any[]>([]);
+  const { selectedPlant } = useAuth();
+
+
   const navigate = useNavigate();
   const currentHour = new Date().getHours();
   const greeting = currentHour < 12 ? 'Good Morning' : currentHour < 17 ? 'Good Afternoon' : 'Good Evening';
@@ -184,6 +226,52 @@ export default function Dashboard() {
     }
   }, [navigate]);
 
+ const fetchDashboardData = async () => {
+  try {
+    const payload = {
+      GENO_FROM: "",
+      GENO_TO: "",
+      DATE_FROM: "",
+      DATE_TO: "",
+      WERKS_FROM: selectedPlant || "",
+      WERKS_TO: selectedPlant || "",
+      VEHICLE_NO: "",
+      INVNO_FROM: "",
+      INVNO_TO: "",
+      SALES_ORG_F: "",
+      SALES_ORG_T: "",
+      R1: "",
+      R2: "",
+      R3: "X",
+      SCREEN: "DASHBOARD"
+    };
+
+    console.log("Dashboard Payload:", payload);
+
+    const res = await service.DashboardReports(payload);
+
+    console.log('Dashboard API Response:', res);
+
+    if (res && res.length > 0) {
+      const data = res[0];
+
+      setDashboardStats({
+        CUR_INW: data.CUR_INW ,
+        CUR_OUT: data.CUR_OUT ,
+        PEND_EX: data.PEND_EX ,
+        TOT_VEH: data.TOT_VEH ,
+      });
+
+      setRecentEntries(data.RECORDS || []);
+    }
+
+  } catch (error) {
+    console.error('Dashboard API Error:', error);
+  }
+};
+
+
+
   useEffect(() => {
     const loggedInDetails = localStorage.getItem('gate_entry_user');
     console.log('loggedInDetails', loggedInDetails);
@@ -198,10 +286,18 @@ export default function Dashboard() {
         console.error("Error parsing user details:", error);
       }
     }
+    // ✅ Call Dashboard API when plant is available or changes
+  if (selectedPlant) {
+    console.log("Dashboard API called for plant:", selectedPlant);
+    fetchDashboardData();
+  }
     window.addEventListener('keydown', handleKeyPress);
 
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [handleKeyPress]);
+  }, [handleKeyPress,selectedPlant]);
+
+
+
 
   // Calculate summary KPIs
   const summaryKpis = useMemo(() => ({
@@ -545,33 +641,35 @@ export default function Dashboard() {
                 <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Plant</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Type</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Ref Type</th>
+                       <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">PO NO</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Vendor</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Vehicle No.</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Time</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Status</th>
+                {/* <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Status</th> */}
               </tr>
             </thead>
             <tbody>
               {recentEntries.map((entry) => (
                 <tr key={entry.id} className="border-t border-border hover:bg-muted/50 transition-colors cursor-pointer">
-                  <td className="px-4 py-3 text-sm font-medium text-accent">{entry.id}</td>
+                  <td className="px-4 py-3 text-sm font-medium text-accent">{entry.GENO}</td>
                   <td className="px-4 py-3 text-sm">
-                    <span className="px-2 py-1 rounded bg-primary/10 text-primary text-xs font-medium">{entry.plant}</span>
+                    <span className="px-2 py-1 rounded bg-primary/10 text-primary text-xs font-medium">{entry.WERKS}</span>
                   </td>
                   <td className="px-4 py-3 text-sm">
-                    <span className={`badge-status ${entry.type === 'Inward' ? 'bg-accent/10 text-accent' : 'bg-info/10 text-info'}`}>
-                      {entry.type}
+                    <span className={`badge-status ${entry.DTYPE=== 'Inward' ? 'bg-accent/10 text-accent' : 'bg-info/10 text-info'}`}>
+                      {entry.DTYPE}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground">{entry.refType}</td>
-                  <td className="px-4 py-3 text-sm text-foreground">{entry.vendor}</td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground">{entry.vehicle}</td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground">{entry.time}</td>
-                  <td className="px-4 py-3 text-sm">
-                    <span className={`badge-status ${entry.status === 'Active' ? 'badge-success' : 'badge-info'}`}>
-                      {entry.status}
+                  <td className="px-4 py-3 text-sm text-muted-foreground">{entry.REFDOCTYP}</td>
+                  <td className="px-4 py-3 text-sm text-foreground">{entry.EBELN}</td>
+                  <td className="px-4 py-3 text-sm text-foreground">{entry.CVNAME}</td>
+                  <td className="px-4 py-3 text-sm text-muted-foreground">{entry.VHNO}</td>
+                  <td className="px-4 py-3 text-sm text-muted-foreground">{entry.VHTIM_IN}</td>
+                  {/* <td className="px-4 py-3 text-sm">
+                    <span className={`badge-status ${entry.VHDAT_OUT === 'Active' ? 'badge-success' : 'badge-info'}`}>
+                      {entry.VHDAT_OUT}
                     </span>
-                  </td>
+                  </td> */}
                 </tr>
               ))}
             </tbody>
