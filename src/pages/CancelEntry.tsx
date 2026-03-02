@@ -36,11 +36,13 @@ export default function CancelEntry() {
   const [cancelDate] = useState(getTodayDate());
   const [cancelTime] = useState(getCurrentTime());
   const handleFetch = async () => {
-    if (!gateEntryNo) {
+   const number = gateEntryNo.trim();
+
+if (!number) {
       toast.error('Enter Gate Entry No');
       return;
     }
-if (gateEntryNo.length !== 10) {
+if (number.length !== 10) {
            Swal.fire({
                 title: "warning",
                 text:"Gate Entry Number Should be 10 Digits Only",

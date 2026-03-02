@@ -22,7 +22,7 @@ interface ItemRow {
   "VGBEL": string,
   "VGPOS": number,
   "EXTROW": number,
-  "MATNR": number,
+  "MATNR": string,
   "MAKTX": string,
   "GRWGT": number,
   "GRDAT": string,
@@ -241,6 +241,7 @@ export default function InwardWithoutReference() {
   const [currentPage, setCurrentPage] = useState(1);
   const [isPoMode, setIsPoMode] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [uomList, setUomList] = useState<any[]>([]);
 
   const totalPages = Math.ceil(items.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -275,20 +276,86 @@ export default function InwardWithoutReference() {
   //   }, 800);
   // };
 
-  const handleMaterialCodeChange = (pageIndex: number, code: string) => {
-    const actualIndex = startIndex + pageIndex;
-    const material = getMaterialByCode(code);
-    setItems(prev => prev.map((item, i) =>
-      i === actualIndex
-        ? {
-          ...item,
-          materialCode: code,
-          materialDescription: material?.description || '',
-          unit: material?.unit || item.CHUOM
+   useEffect(() => {
+      const fetchUOM = async () => {
+        try {
+          const res = await service.UOMGet();
+          console.log("UOM Response", res);
+          setUomList(res || []);
+        } catch (error) {
+          console.error("Failed to fetch UOM", error);
+          toast.error("Failed to load UOM list");
         }
-        : item
-    ));
-  };
+      };
+  
+      fetchUOM();
+    }, []);
+  
+   
+
+   const handleMaterialCodeChange = (pageIndex: number, code: string) => {
+     const actualIndex = startIndex + pageIndex;
+     const material = getMaterialByCode(code);
+     setItems(prev => prev.map((item, i) =>
+       i === actualIndex
+         ? {
+           ...item,
+           materialCode: code,
+           materialDescription: material?.description || '',
+           unit: material?.unit || item.CHUOM
+         }
+         : item
+     ));
+   };
+ 
+
+     const fetchMaterialDetails = async (matnr: string, index: number) => {
+       if (!matnr) return;
+   
+       setIsLoading(true);
+   
+       try {
+         const payload = {
+           MATNR: matnr
+         };
+   
+         const response = await service.MaterialCode(payload);
+   
+         if (response?.MATNR) {
+           setItems(prev => {
+             const updated = [...prev];
+   
+             updated[index] = {
+               ...updated[index],
+               MATNR: response.MATNR,
+               MAKTX: response.MAKTX || "",
+               CHUOM: response.UOM || ""
+             };
+   
+             return updated;
+           });
+         } else {
+           Swal.fire("Error", "Material not found", "error");
+         }
+   
+       } catch (error) {
+         console.error("Material fetch failed", error);
+         Swal.fire("Error", "Failed to fetch material", "error");
+       } finally {
+         setIsLoading(false);
+       }
+     };
+
+     const handleNumberOnlyChange = (
+  index: number,
+  field: keyof ItemRow,
+  value: string
+) => {
+  // Allow only digits (0-9)
+  const numericValue = value.replace(/[^0-9]/g, "");
+
+  handleItemChange(index, field, numericValue);
+};
 
   const handleItemChange = (
     index: number,
@@ -828,7 +895,7 @@ export default function InwardWithoutReference() {
                   <th className="w-32">Material Code</th>
                   <th className="w-60">Material Description</th>
                   <th className="w-24 text-center">Quantity</th>
-                  <th className="w-24 text-center">Unit</th>
+                  <th style={{ width: '250px' }}>Unit</th>
                   <th className="w-32">Vendor</th>
                   <th style={{ width: '250px' }}>Vendor Name</th>
                   <th className="w-40">Packing Condition</th>
@@ -868,12 +935,32 @@ export default function InwardWithoutReference() {
                       </td>
 
                       {/* Material Code */}
-                      <td>
+                      {/* <td>
                         <Input
                           value={item.MATNR}
                           onChange={(e) =>
                             handleItemChange(actualIndex, 'MATNR', Number(e.target.value))
                           }
+                          className="h-8"
+                        />
+                      </td> */}
+
+                     <td>
+                        <Input
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          value={item.MATNR ?? ""}
+                          onChange={(e) =>
+                            handleNumberOnlyChange(actualIndex, "MATNR", e.target.value)
+                          }
+                          onBlur={() => fetchMaterialDetails(item.MATNR, actualIndex)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              fetchMaterialDetails(item.MATNR, actualIndex);
+                            }
+                          }}
                           className="h-8"
                         />
                       </td>
@@ -890,19 +977,43 @@ export default function InwardWithoutReference() {
                       </td>
 
                       {/* PO Quantity */}
-                      <td>
+                      {/* <td>
                         <Input
-                          type="number"
+                          type="text"
                           value={item.ZQUANT}
                           onChange={(e) =>
                             handleItemChange(actualIndex, 'ZQUANT', Number(e.target.value))
                           }
                           className="h-8 text-center"
                         />
-                      </td>
+                      </td> */}
+                      <td>
+  <Input
+    type="number"
+    min="1"
+    value={item.ZQUANT ?? ""}
+    onChange={(e) => {
+      const value = e.target.value;
+
+      // Allow empty
+      if (value === "") {
+        handleItemChange(actualIndex, "ZQUANT", "");
+        return;
+      }
+
+      const num = Number(value);
+
+      // Allow only numbers greater than 0
+      if (num > 0) {
+        handleItemChange(actualIndex, "ZQUANT", num);
+      }
+    }}
+    className="h-8 text-center"
+  />
+</td>
 
                       {/* PO Unit */}
-                      <td>
+                      {/* <td>
                         <Input
                           value={item.ZMEINS}
                           onChange={(e) =>
@@ -910,18 +1021,42 @@ export default function InwardWithoutReference() {
                           }
                           className="h-8 text-center"
                         />
+                      </td> */}
+
+   <td>
+                        <Select
+                          value={item.CHUOM}
+                          onValueChange={(value) =>
+                            handleItemChange(actualIndex, "CHUOM", value)
+                          }
+                        >
+                          <SelectTrigger className="h-8">
+                            <SelectValue placeholder="Select UOM" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {uomList.map((uom, index) => (
+                              <SelectItem key={index} value={uom.MSEHI}>
+                                {uom.MSEHI} - {uom.MSEHL}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </td>
 
                        {/* Vendor */}
                       <td className="px-1 py-1">
                         <div className="flex items-center gap-1 w-full">
-                          <Input
-                            value={item.CVNO}
-                            onChange={(e) =>
-                              handleItemChange(actualIndex, 'CVNO', e.target.value)
-                            }
-                           className="h-8 w-full px-2"
-                          />
+                         <Input
+  type="text"
+  inputMode="numeric"
+  pattern="[0-9]*"
+  value={item.CVNO ?? ""}
+  onChange={(e) =>
+    handleNumberOnlyChange(actualIndex, "CVNO", e.target.value)
+  }
+  onBlur={() => fetchVendorName(item.CVNO, actualIndex)}
+  className="h-8 w-full px-2"
+/>
 
                           <button
                             type="button"
@@ -939,10 +1074,9 @@ export default function InwardWithoutReference() {
                       <td>
                         <Input
                           value={item.CVNAME}
-                          disabled
-                          // onChange={(e) =>
-                          //   handleItemChange(actualIndex, 'CVNAME', e.target.value)
-                          // }
+                          onChange={(e) =>
+                            handleItemChange(actualIndex, 'CVNAME', e.target.value)
+                          }
                        className="h-8 w-full bg-muted/50"
                         />
                       </td>

@@ -286,7 +286,7 @@ const stats = useMemo(() => [
         console.error("Error parsing user details:", error);
       }
     }
-    // ✅ Call Dashboard API when plant is available or changes
+    //  Call Dashboard API when plant is available or changes
   if (selectedPlant) {
     console.log("Dashboard API called for plant:", selectedPlant);
     fetchDashboardData();

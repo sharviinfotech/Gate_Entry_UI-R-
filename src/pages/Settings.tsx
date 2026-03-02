@@ -30,6 +30,7 @@ interface User {
   contactNumber: string;
   role: string[];
   password?: string;
+  confirmPassword: string;
 
   status: 'Active' | 'Inactive';
 }
@@ -88,8 +89,12 @@ export default function Settings() {
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [plantRoles, setPlantRoles] = useState<Role[]>([]);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-
+ const [plantDropdownOpen, setPlantDropdownOpen] = useState(false);
+const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
+  const [plantSearch, setPlantSearch] = useState("");
+const filteredPlantOptions = plantOptions.filter(p =>
+  p.label.toLowerCase().includes(plantSearch.toLowerCase())
+);
 
 
   // Filtered users based on search
@@ -109,6 +114,7 @@ export default function Settings() {
     emailId: '',
     contactNumber: '',
     password: '',
+      confirmPassword: '', 
     role: [] as string[],
     status: 'Active' as 'Active' | 'Inactive',
   });
@@ -205,6 +211,7 @@ export default function Settings() {
       contactNumber: '',
       role: [],
       password: '',
+        confirmPassword: '', 
       status: 'Active',
     });
     setIsUserDialogOpen(true);
@@ -224,7 +231,10 @@ export default function Settings() {
       toast.error("Please fill in all required fields");
       return;
     }
-
+if (userForm.password !== userForm.confirmPassword) {
+  toast.error("Passwords do not match");
+  return;
+}
     const [firstName, ...lastNameArr] = userForm.fullName.trim().split(" ");
     const lastName = lastNameArr.join(" ") || "";
 
@@ -241,6 +251,7 @@ export default function Settings() {
         EMAIL: userForm.emailId,
         CONTACT: userForm.contactNumber,
         PASSWORD: userForm.password,
+         ZCONFPSWD: userForm.confirmPassword,
         STATUS: userForm.status,
       },
     };
@@ -313,10 +324,21 @@ export default function Settings() {
     };
 
 
-    if (userForm.password?.trim()) {
-      payload.EDIT.PASSWORD = userForm.password;
-    }
+   if (userForm.password?.trim()) {
 
+  if (!userForm.confirmPassword) {
+    toast.error("Please confirm password");
+    return;
+  }
+
+  if (userForm.password !== userForm.confirmPassword) {
+    toast.error("Passwords do not match");
+    return;
+  }
+
+  payload.EDIT.PASSWORD = userForm.password;
+  payload.EDIT.ZCONFPSWD = userForm.confirmPassword;
+}
     console.log("EDIT PAYLOAD:", payload);
  setIsLoading(true);
     try {
@@ -362,6 +384,7 @@ export default function Settings() {
       contactNumber: user.contactNumber,
       role: [...user.role],
       password: user.password,
+       confirmPassword: user.confirmPassword ,  
       status: user.status,
     });
 
@@ -397,6 +420,7 @@ export default function Settings() {
             plant: [],
             role: [],
             password: item.ZPASSWORD,
+confirmPassword: item.ZCONFPSWD,
             status: item.ZSTATUS === "Inactive" ? "Inactive" : "Active",
           };
         }
@@ -734,20 +758,25 @@ export default function Settings() {
                     filteredUsers.map((user) => (
                       <TableRow key={user.id} className="hover:bg-muted/30">
 
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="secondary">
-                              Plants: {user.plant.length}
-                            </Badge>
-                            <Button
-                              variant="link"
-                              size="sm"
-                              onClick={() => openViewDialog(user, 'PLANT')}
-                            >
-                              View
-                            </Button>
-                          </div>
-                        </TableCell>
+                    {/* <TableCell
+  onClick={() => openViewDialog(user, 'PLANT')}
+  className="cursor-pointer hover:bg-muted/30 transition"
+>
+  <Badge variant="secondary">
+    Plants: {user.plant.length}
+  </Badge>
+</TableCell> */}
+<TableCell className="text-center">
+  <Button
+    variant="outline"
+    size="sm"
+    onClick={() => openViewDialog(user, 'PLANT')}
+    className="gap-2"
+  >
+    <Eye className="w-4 h-4" />
+    Plants ({user.plant.length})
+  </Button>
+</TableCell>
 
 
 
@@ -755,20 +784,25 @@ export default function Settings() {
                         <TableCell>{user.fullName}</TableCell>
                         <TableCell className="text-muted-foreground">{user.emailId}</TableCell>
                         <TableCell>{user.contactNumber}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <Badge variant="secondary">
-                              Roles: {user.role.length}
-                            </Badge>
-                            <Button
-                              variant="link"
-                              size="sm"
-                              onClick={() => openViewDialog(user, 'ROLE')}
-                            >
-                              View
-                            </Button>
-                          </div>
-                        </TableCell>
+                    {/* <TableCell
+  onClick={() => openViewDialog(user, 'ROLE')}
+  className="cursor-pointer hover:bg-muted/30 transition"
+>
+  <Badge variant="secondary">
+    Roles: {user.role.length}
+  </Badge>
+</TableCell> */}
+<TableCell className="text-center">
+  <Button
+    variant="outline"
+    size="sm"
+    onClick={() => openViewDialog(user, 'ROLE')}
+    className="gap-2"
+  >
+    <Eye className="w-4 h-4" />
+    Roles ({user.role.length})
+  </Button>
+</TableCell>
 
                         <TableCell className="text-center">
                           <Switch
@@ -886,74 +920,142 @@ export default function Settings() {
 
             <div className="space-y-5 py-4">
 
-              <div className="relative w-full">
-                <Label>
-                  Plant <span className="text-red-500">*</span>
-                </Label>
+            <div className="relative w-full">
+  <Label>
+    Plant <span className="text-red-500">*</span>
+  </Label>
 
-                {/* Dropdown box */}
-                <div
-                  className="border border-border rounded-lg p-2 cursor-pointer flex justify-between items-center"
-                  onClick={() => setDropdownOpen(prev => !prev)}
-                >
-                  <span>
-                    {userForm.plant.length > 0
-                      ? plantOptions
-                        .filter(p => userForm.plant.includes(p.value))
-                        .map(p => p.label)
-                        .join(", ")
-                      : "-- Select Plants --"}
-                  </span>
-                  <svg
-                    className={`w-4 h-4 transform transition-transform ${dropdownOpen ? "rotate-180" : ""}`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
+  {/* SELECT BOX */}
+<div
+  className="w-full border border-border rounded-lg h-10 bg-white cursor-pointer flex items-center overflow-hidden"
+  onClick={() => setPlantDropdownOpen(prev => !prev)}
+>
+  {/* TEXT - never overflows */}
+  <div className="flex-1 px-3">
+    <span className="text-sm text-gray-700">
+   {userForm.plant.length === 0
+  ? "-- Select Plants --"
+  : (() => {
+      const maxVisible = 6; // 👈 show only first 3
+      const plants = userForm.plant;
 
-                {/* Checkbox list dropdown */}
-                {dropdownOpen && (
-                  <div className="absolute z-10 mt-1 w-full max-h-48 overflow-y-auto border border-border rounded-lg bg-white shadow-lg">
-                    {plantOptions.map((plant) => (
-                      <label
-                        key={plant.value}
-                        className="flex items-center space-x-2 p-2 cursor-pointer hover:bg-gray-100"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={userForm.plant.includes(plant.value)}
-                          onChange={(e) => {
-                            const newPlants = e.target.checked
-                              ? [...userForm.plant, plant.value]
-                              : userForm.plant.filter(p => p !== plant.value);
+      if (plants.length <= maxVisible) {
+        return plants.join(", ");
+      }
 
-                            setUserForm(prev => ({
-                              ...prev,
-                              plant: newPlants,
-                              role: [],
-                            }));
-                            fetchRolesByPlants(newPlants);
-                          }}
-                          className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
-                        />
-                        <span className="text-sm">{plant.label}</span>
-                      </label>
-                    ))}
-                  </div>
-                )}
+      return `${plants.slice(0, maxVisible).join(", ")} +${plants.length - maxVisible} selected`;
+    })()}
+    </span>
+  </div>
 
-                {userForm.plant.length === 0 && (
-                  <p className="text-xs text-muted-foreground mt-1">Please select at least one plant</p>
-                )}
-              </div>
+  {/* ICON - always visible */}
+  <div className="flex-shrink-0 w-10 h-full flex justify-center items-center border-l border-border bg-gray-50">
+    <svg
+      className={`w-4 h-4 transition-transform ${plantDropdownOpen ? "rotate-180" : ""}`}
+      fill="none" stroke="currentColor" viewBox="0 0 24 24"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+    </svg>
+  </div>
+</div>
+  {/* DROPDOWN CARD */}
+ {plantDropdownOpen && (
+    <div className="absolute left-0 top-full mt-1 w-full bg-white border border-border rounded-lg shadow-lg z-50">
+
+      {/* SEARCH */}
+      <div className="p-2 border-b">
+        <input
+          type="text"
+          placeholder="Search plant..."
+          value={plantSearch}
+          onChange={(e) => setPlantSearch(e.target.value)}
+          className="w-full px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-primary/20"
+        />
+      </div>
+
+      {/* SELECT ALL */}
+      <div className="p-2 border-b bg-muted/30">
+        <label className="flex items-center space-x-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={
+              userForm.plant.length > 0 &&
+              userForm.plant.length === plantOptions.length
+            }
+         onChange={(e) => {
+  const allPlants = e.target.checked
+    ? plantOptions.map(p => p.value)
+    : [];
+
+  setUserForm(prev => {
+    const validRoles = prev.role.filter(r => {
+      const [werks] = r.split("-");
+      return allPlants.includes(werks);
+    });
+
+    return {
+      ...prev,
+      plant: allPlants,
+      role: validRoles,
+    };
+  });
+
+  fetchRolesByPlants(allPlants);
+}}
+          />
+          <span className="font-medium text-sm">Select All</span>
+        </label>
+      </div>
+
+      {/* PLANT LIST */}
+      <div className="max-h-48 overflow-y-auto">
+        {filteredPlantOptions.length === 0 ? (
+          <p className="p-3 text-sm text-muted-foreground">
+            No plants found
+          </p>
+        ) : (
+          filteredPlantOptions.map((plant) => (
+            <label
+              key={plant.value}
+              className="flex items-center space-x-2 p-2 cursor-pointer hover:bg-gray-100"
+            >
+              <input
+                type="checkbox"
+                checked={userForm.plant.includes(plant.value)}
+                onChange={(e) => {
+                  const newPlants = e.target.checked
+                    ? [...userForm.plant, plant.value]
+                    : userForm.plant.filter(p => p !== plant.value);
+
+                  setUserForm(prev => ({
+                    ...prev,
+                    plant: newPlants,
+                    // role: [],
+                  }));
+
+                  fetchRolesByPlants(newPlants);
+                }}
+              />
+              <span className="text-sm">{plant.label}</span>
+            </label>
+          ))
+        )}
+      </div>
+    </div>
+  )}
+
+  {/* VALIDATION MESSAGE */}
+  {userForm.plant.length === 0 && (
+    <p className="text-xs text-muted-foreground mt-1">
+      Please select at least one plant
+    </p>
+  )}
+</div>
 
               <TextField
                 label="User ID"
                 value={userForm.userId}
-                onChange={(value) => setUserForm({ ...userForm, userId: value })}
+                onChange={(value) => setUserForm({ ...userForm, userId: value.slice(0,10) })}
                 placeholder="Enter User ID (e.g., USR001)"
                 required
               />
@@ -1001,58 +1103,99 @@ export default function Settings() {
                 }
               />
               {/* Role Multi-Select with Checkboxes */}
-              <div className="space-y-2">
-                <Label>
-                  Role <span className="text-red-500">*</span>
-                </Label>
+             {/* ROLE DROPDOWN */}
+<div className="relative w-full">
+  <Label>
+    Role <span className="text-red-500">*</span>
+  </Label>
 
-                <div className="border border-border rounded-lg p-3 max-h-48 overflow-y-auto space-y-2">
-                  {userForm.plant.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                      Please select plant(s) first
-                    </p>
-                  ) : plantRoles.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                      No roles available for selected plant(s)
-                    </p>
-                  ) : (
-                    plantRoles.map((role) => {
-                      const roleValue = `${role.werks}-${role.roleName}`; // ✅ UNIQUE
-                      const roleLabel = `${role.werks} - ${role.roleName}`;
+  {/* Dropdown Box */}
+ <div
+  className="w-full border border-border rounded-lg h-10 cursor-pointer flex items-center overflow-hidden"
+  onClick={() => setRoleDropdownOpen(prev => !prev)}
+>
 
-                      return (
-                        <div key={role.id} className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            id={`role-${role.id}`}
-                            checked={userForm.role.includes(roleValue)}
-                            onChange={(e) => {
-                              const newRoles = e.target.checked
-                                ? [...userForm.role, roleValue]
-                                : userForm.role.filter(r => r !== roleValue);
+  <div className="flex-1 px-3">
+    <span className="text-sm text-gray-700">
+    {userForm.role.length === 0
+  ? "-- Select Roles --"
+  : (() => {
+      const maxVisible = 6; // 👈 how many you want to show
+      const formatted = userForm.role.map(r => {
+        const [w, role] = r.split("-");
+        return `${w}-${role}`;
+      });
 
-                              setUserForm(prev => ({ ...prev, role: newRoles }));
-                            }}
-                            className="w-4 h-4 text-primary border-gray-300 rounded cursor-pointer"
-                          />
-                          <label
-                            htmlFor={`role-${role.id}`}
-                            className="text-sm cursor-pointer"
-                          >
-                            {roleLabel}
-                          </label>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
+      if (formatted.length <= maxVisible) {
+        return formatted.join(", ");
+      }
 
-                {userForm.role.length === 0 && userForm.plant.length > 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    Please select at least one role
-                  </p>
-                )}
-              </div>
+      return `${formatted.slice(0, maxVisible).join(", ")} +${formatted.length - maxVisible} selected`;
+    })()}
+    </span>
+  </div>
+
+  {/* ICON - always visible */}
+  <div className="flex-shrink-0 w-10 h-full flex justify-center items-center border-l border-border bg-gray-50">
+    <svg
+      className={`w-4 h-4 transition-transform ${roleDropdownOpen ? "rotate-180" : ""}`}
+      fill="none" stroke="currentColor" viewBox="0 0 24 24"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+    </svg>
+  </div>
+</div>
+
+  {/* Dropdown List */}
+ {roleDropdownOpen && (
+    <div className="absolute z-10 mt-1 w-full max-h-48 overflow-y-auto border border-border rounded-lg bg-white shadow-lg">
+      {userForm.plant.length === 0 ? (
+        <p className="p-3 text-sm text-muted-foreground">
+          Please select plant(s) first
+        </p>
+      ) : plantRoles.length === 0 ? (
+        <p className="p-3 text-sm text-muted-foreground">
+          No roles available
+        </p>
+      ) : (
+        plantRoles.map((role) => {
+          const roleValue = `${role.werks}-${role.roleName}`;
+          const roleLabel = `${role.werks} - ${role.roleName}`;
+
+          return (
+            <label
+              key={role.id}
+              className="flex items-center space-x-2 p-2 cursor-pointer hover:bg-gray-100"
+            >
+              <input
+                type="checkbox"
+                checked={userForm.role.includes(roleValue)}
+                onChange={(e) => {
+                  const newRoles = e.target.checked
+                    ? [...userForm.role, roleValue]
+                    : userForm.role.filter(r => r !== roleValue);
+
+                  setUserForm(prev => ({
+                    ...prev,
+                    role: newRoles,
+                  }));
+                }}
+                className="w-4 h-4 text-primary border-gray-300 rounded"
+              />
+              <span className="text-sm">{roleLabel}</span>
+            </label>
+          );
+        })
+      )}
+    </div>
+  )}
+
+  {userForm.role.length === 0 && userForm.plant.length > 0 && (
+    <p className="text-xs text-muted-foreground mt-1">
+      Please select at least one role
+    </p>
+  )}
+</div>
 
 
 
@@ -1071,7 +1214,7 @@ export default function Settings() {
                   label="Password"
                   type={showPassword ? "text" : "password"}
                   value={userForm.password}
-                  onChange={(val) => setUserForm({ ...userForm, password: val })}
+                  onChange={(val) => setUserForm({ ...userForm, password: val.slice(0,10) })}
                   placeholder="Enter password"
                 />
 
@@ -1111,6 +1254,23 @@ export default function Settings() {
                   {showPassword ? '👁️' : '🙈'}
                 </button> */}
               </div>
+              <div style={{ position: 'relative', width: '100%' }}>
+  <TextField
+    label="Confirm Password"
+    type={showPassword ? "text" : "password"}
+    value={userForm.confirmPassword}
+    onChange={(val) =>
+      setUserForm({ ...userForm, confirmPassword: val.slice(0,10) })
+    }
+    placeholder="Re-enter password"
+    error={
+      userForm.confirmPassword.length > 0 &&
+      userForm.password !== userForm.confirmPassword
+        ? "Passwords do not match"
+        : undefined
+    }
+  />
+</div>
               <SelectField
                 label="Status"
                 value={userForm.status}

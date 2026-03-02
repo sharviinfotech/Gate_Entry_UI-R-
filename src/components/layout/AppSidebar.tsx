@@ -105,7 +105,9 @@ const { currentTheme } = useTheme();
       }
       
       // For single items, Dashboard is always allowed, others check activities array
-      return item.activity === 'Dashboard' || (item.activity && activities.includes(item.activity));
+      // return item.activity === 'Dashboard' || (item.activity && activities.includes(item.activity));
+      return item.activity && activities.includes(item.activity);
+
     });
   }, [activities]);
 

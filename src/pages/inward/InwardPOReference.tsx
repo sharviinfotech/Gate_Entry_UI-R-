@@ -313,9 +313,16 @@ export default function InwardPOReference() {
         if (response) {
 
 
-          const itemResponse: ItemRow[] = response;
-          console.log("itemResponse", itemResponse)
-          setItems(itemResponse);
+          // const itemResponse: ItemRow[] = response;
+          // console.log("itemResponse", itemResponse)
+          // setItems(itemResponse);
+
+          const itemResponse: ItemRow[] = response.map((item: ItemRow) => ({
+  ...item,
+  ZQUANT: item.ZQUANT && item.ZQUANT > 0 ? item.ZQUANT : null
+}));
+
+setItems(itemResponse);
 
           setHeaderData(prev => ({
             ...prev,
@@ -974,13 +981,51 @@ export default function InwardPOReference() {
                         <td className="p-2 border">{item.CHUOM}</td>
 
                         {/* Editable Gate Entry Quantity */}
-                        <td className="p-2 border">
+                        {/* <td className="p-2 border">
                           <Input
                             type="number"
                             value={item.ZQUANT ?? ''}
                             onChange={(e) => {
                               const val = e.target.value === '' ? null : Number(e.target.value);
                               handleItemChange(index, 'ZQUANT', val);
+                            }}
+                            className="h-8 text-right"
+                          />
+                        </td> */}
+                        <td className="p-2 border">
+                          <Input
+                            type="number"
+                            min="1"
+                            max={item.CHQTY}
+                            value={item.ZQUANT ?? ""}
+                            onKeyDown={(e) => {
+                              // Prevent invalid keys
+                              if (e.key === "-" || e.key === "+" || e.key === "e") {
+                                e.preventDefault();
+                              }
+                            }}
+                            onChange={(e) => {
+                              const value = e.target.value;
+
+                              // Allow empty while deleting
+                              if (value === "") {
+                                handleItemChange(index, "ZQUANT", null);
+                                return;
+                              }
+
+                              const num = Number(value);
+
+                              if (num > item.CHQTY) {
+                                Swal.fire(
+                                  "Invalid Quantity",
+                                  `Gate Entry Qty cannot exceed PO Qty (${item.CHQTY})`,
+                                  "warning"
+                                );
+                                return; // stop here
+                              }
+                              if (num >= 1 && num <= item.CHQTY) {
+                                handleItemChange(index, "ZQUANT", num);
+                              }
                             }}
                             className="h-8 text-right"
                           />

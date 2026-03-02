@@ -187,6 +187,23 @@ const backendNodejs = {
         return res.json();
     },
 
+  MaterialCode: async (data) => {
+        const res = await fetch(`${BASE_URL}api/external/Gate_Entry/Inward/Materialcode`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+        });
+        return res.json();
+    },
+
+  UOMGet: async () => {
+        const res = await fetch(`${BASE_URL}api/external/Gate_Entry/UOMGet`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+        });
+        return res.json();
+    },
+
 };
 
 export default backendNodejs;

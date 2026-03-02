@@ -72,10 +72,11 @@ export default function ChangeEntry() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [refDocType, setRefDocType] = useState<string>("");
-   const { webUser } = useAuth();
+  const { webUser } = useAuth();
   const [headerData, setHeaderData] = useState({
     WERKS: '',
-    DTYPE: '',
+    // DTYPE: '',
+    DTYPE: 'Inward Process',
     VHDAT_IN: '',
     VHTIM_IN: '',
     VHNO: '',
@@ -145,18 +146,20 @@ export default function ChangeEntry() {
   const [items, setItems] = useState<ItemRow[]>([]);
   const ITEMS_PER_PAGE = 10;
   const handleFetch = async () => {
-    if (!gateEntryNo) {
+   const number = gateEntryNo.trim();
+
+if (!number) {
       toast.error('Please enter Gate Entry Number');
       return;
     }
     console.log("gateEntryNo", gateEntryNo)
-    if (gateEntryNo.length !== 10) {
-       Swal.fire({
-            title: "warning",
-            text:"Gate Entry Number Should be 10 Digits Only",
-            icon: "warning",
-            confirmButtonColor: "#f0ad4e",
-          });
+ if (number.length !== 10) {
+      Swal.fire({
+        title: "warning",
+        text: "Gate Entry Number Should be 10 Digits Only",
+        icon: "warning",
+        confirmButtonColor: "#f0ad4e",
+      });
       return;
     }
     setIsLoading(true);
@@ -230,10 +233,21 @@ export default function ChangeEntry() {
           setIsLoaded(true);
           setIsLoading(false);
           toast.success('Data Fetched successfully');
+          var localREFDOCTYP = '';
+          if (headerResponse.REFDOCTYP === "PO") {
+            localREFDOCTYP = "Purchase Order"
+          }
+          else if (headerResponse.REFDOCTYP === "SUB") {
+            localREFDOCTYP = "Subcontracting"
+          }
+          else if (headerResponse.REFDOCTYP === "WOREF") {
+            localREFDOCTYP = "Without Reference"
+          }
           setHeaderData({
             GENO: headerResponse.GENO,
             WERKS: headerResponse.WERKS,
-            DTYPE: headerResponse.DTYPE,
+            // DTYPE: headerResponse.DTYPE,
+            DTYPE: 'Inward Process',
             VHDAT_IN: headerResponse.VHDAT_IN,
             VHTIM_IN: headerResponse.VHTIM_IN,
             VHNO: headerResponse.VHNO,
@@ -246,7 +260,7 @@ export default function ChangeEntry() {
             VENDOR: headerResponse.VENDOR || itemResponse[0].CVNO,
             VNAME: headerResponse.VNAME || itemResponse[0].CVNAME,
             INWARDED_BY: headerResponse.INWARDED_BY,
-            REFDOCTYP: headerResponse.REFDOCTYP,
+            REFDOCTYP: localREFDOCTYP,
             LEDAT: headerResponse.LEDAT,
             LETIM: headerResponse.LETIM,
             TRADDR: headerResponse.TRADDR,
@@ -278,7 +292,7 @@ export default function ChangeEntry() {
             "LCTIM": "00:00:00",
             "LCUSR": "",
             "SCTXT": "",
-            "ERNAM":headerResponse.ERNAM,
+            "ERNAM": headerResponse.ERNAM,
             "LIFNR": "",
             "GATEPASS": "",
             "DESTINATION": "",
@@ -311,35 +325,35 @@ export default function ChangeEntry() {
 
 
   };
- const fetchVendorName = async (vendorCode, index) => {
-      if (!vendorCode) return;
-      setIsLoading(true);
-      try {
-  
-        let payload = {
-          "VENDOR": vendorCode
-        }
-  
-        const response = await service.VendorName(payload);
-  
-  
-  
-        if (response?.VEN_NAME) {
-          setItems(prev => {
-            const updated = [...prev];
-            updated[index] = {
-              ...updated[index],
-              CVNAME: response.VEN_NAME,
-            };
-            return updated;
-          });
-        }
-      } catch (err) {
-        console.error("Vendor fetch failed", err);
-      } finally {
-        setIsLoading(false);
+  const fetchVendorName = async (vendorCode, index) => {
+    if (!vendorCode) return;
+    setIsLoading(true);
+    try {
+
+      let payload = {
+        "VENDOR": vendorCode
       }
-    };
+
+      const response = await service.VendorName(payload);
+
+
+
+      if (response?.VEN_NAME) {
+        setItems(prev => {
+          const updated = [...prev];
+          updated[index] = {
+            ...updated[index],
+            CVNAME: response.VEN_NAME,
+          };
+          return updated;
+        });
+      }
+    } catch (err) {
+      console.error("Vendor fetch failed", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
   const handleItemChange = (
     index: number,
     field: keyof ItemRow,
@@ -425,7 +439,7 @@ export default function ChangeEntry() {
       return;
     }
     toast.success('Gate Entry updated successfully!');
-     const storedDetails = localStorage.getItem('gate_entry_user');
+    const storedDetails = localStorage.getItem('gate_entry_user');
 
     // 2. Parse it back into an object if it exists
     if (storedDetails) {
@@ -433,6 +447,17 @@ export default function ChangeEntry() {
 
       // 3. Now you can access the property safely
       headerData.USR_IN = loggedInDetails.USER;
+    }
+
+    headerData.DTYPE = "IN"
+    if (headerData.REFDOCTYP === "Purchase Order") {
+      headerData.REFDOCTYP = "PO"
+    }
+    else if (headerData.REFDOCTYP === "Subcontracting") {
+      headerData.REFDOCTYP = "SUB"
+    }
+    else if (headerData.REFDOCTYP === "Without Reference") {
+      headerData.REFDOCTYP = "WOREF"
     }
     const payload = {
       "CREATE": "",
@@ -510,7 +535,8 @@ export default function ChangeEntry() {
     setIsLoaded(false);
     setHeaderData({
       WERKS: '',
-      DTYPE: '',
+      // DTYPE: '',
+      DTYPE: 'Inward Process',
       VHDAT_IN: '',
       VHTIM_IN: '',
       VHNO: '',
@@ -971,13 +997,19 @@ export default function ChangeEntry() {
                       <th className="p-2 border w-60">Material Description</th>
                       {/* Logic for Qty/Unit Columns */}
                       {/* PO Qty & PO Unit → show for PO and SUB */}
-                      {["PO", "SUB"].includes(refDocType) && (
+                      {["PO"].includes(refDocType) && (
                         <>
                           <th className="p-2 border w-24">PO Qty</th>
                           <th className="p-2 border w-24">PO Unit</th>
                         </>
                       )}
 
+ {["SUB"].includes(refDocType) && (
+                        <>
+                          <th style={{ width : '150px'}}>Received Qty</th>
+                          <th className="p-2 border w-24">UOM</th>
+                        </>
+                      )}
                       {/* Quantity → show for PO and others (NOT SUB-only logic) */}
 
                       {["PO"].includes(refDocType) && (
@@ -996,7 +1028,7 @@ export default function ChangeEntry() {
                       {["SUB", "WOREF"].includes(refDocType) && (
                         <>
                           <th className="p-2 border w-40">Vendor</th>
-                          <th style={{width:'250px'}}>Vendor Name</th>
+                          <th style={{ width: '250px' }}>Vendor Name</th>
                         </>
                       )}
                       <th className="p-2 border w-40">Packing Condition</th>
@@ -1025,6 +1057,7 @@ export default function ChangeEntry() {
                         {/* Material Code */}
                         <td className="p-2 border">
                           <Input
+                            disabled
                             value={item.MATNR}
                             onChange={(e) => handleItemChange(index, 'MATNR', e.target.value)}
                             className="h-8"
@@ -1035,26 +1068,84 @@ export default function ChangeEntry() {
                         {/* Description */}
                         <td className="p-2 border">
                           <Input
+                            disabled
                             value={item.MAKTX}
                             onChange={(e) => handleItemChange(index, 'MAKTX', e.target.value)}
                             className="h-8"
                           />
                         </td>
                         {/* PO Qty & PO Unit */}
-                        {["PO", "SUB"].includes(refDocType) && (
+                        {["PO"].includes(refDocType) && (
                           <>
                             <td className="p-2 border">
                               <Input
+                              disabled
                                 type="number"
+                                min="1"
                                 value={item.CHQTY}
-                                onChange={(e) =>
-                                  handleItemChange(index, 'CHQTY', Number(e.target.value))
-                                }
+                            
+                                onChange={(e) => {
+                                  const value = e.target.value;
+
+
+                                  if (value === "") {
+                                    handleItemChange(index, "CHQTY", "");
+                                    return;
+                                  }
+
+                                  const num = Number(value);
+
+                                  // Allow only numbers greater than 0
+                                  if (num > 0) {
+                                    handleItemChange(index, "CHQTY", num);
+                                  }
+                                }}
                                 className="h-8 text-right"
                               />
                             </td>
                             <td className="p-2 border">
                               <Input
+                              disabled
+                                value={item.CHUOM}
+                                onChange={(e) =>
+                                  handleItemChange(index, 'CHUOM', e.target.value)
+                                }
+                                className="h-8"
+                              />
+                            </td>
+                          </>
+                        )}
+  {[ "SUB"].includes(refDocType) && (
+                          <>
+                            <td className="p-2 border">
+                              <Input
+                              
+                                type="number"
+                                min="1"
+                                value={item.CHQTY}
+                            
+                                onChange={(e) => {
+                                  const value = e.target.value;
+
+
+                                  if (value === "") {
+                                    handleItemChange(index, "CHQTY", "");
+                                    return;
+                                  }
+
+                                  const num = Number(value);
+
+                                  // Allow only numbers greater than 0
+                                  if (num > 0) {
+                                    handleItemChange(index, "CHQTY", num);
+                                  }
+                                }}
+                                className="h-8 text-right"
+                              />
+                            </td>
+                            <td className="p-2 border">
+                              <Input
+                              disabled
                                 value={item.CHUOM}
                                 onChange={(e) =>
                                   handleItemChange(index, 'CHUOM', e.target.value)
@@ -1066,17 +1157,31 @@ export default function ChangeEntry() {
                         )}
 
 
-
                         {/* Quantity & Unit */}
                         {["PO"].includes(refDocType) && (
                           <>
                             <td className="p-2 border">
                               <Input
                                 type="number"
+                                min="1"
                                 value={item.ZQUANT}
-                                onChange={(e) =>
-                                  handleItemChange(index, 'ZQUANT', Number(e.target.value))
-                                }
+
+                                onChange={(e) => {
+                                  const value = e.target.value;
+
+
+                                  if (value === "") {
+                                    handleItemChange(index, "ZQUANT", "");
+                                    return;
+                                  }
+
+                                  const num = Number(value);
+
+                                  // Allow only numbers greater than 0
+                                  if (num > 0) {
+                                    handleItemChange(index, "ZQUANT", num);
+                                  }
+                                }}
                                 className="h-8 text-right"
                               />
                             </td>
@@ -1088,15 +1193,31 @@ export default function ChangeEntry() {
                             <td className="p-2 border">
                               <Input
                                 type="number"
+                                min="1"
                                 value={item.ZQUANT}
-                                onChange={(e) =>
-                                  handleItemChange(index, 'ZQUANT', Number(e.target.value))
-                                }
+
+                                onChange={(e) => {
+                                  const value = e.target.value;
+
+
+                                  if (value === "") {
+                                    handleItemChange(index, "ZQUANT", "");
+                                    return;
+                                  }
+
+                                  const num = Number(value);
+
+                                  // Allow only numbers greater than 0
+                                  if (num > 0) {
+                                    handleItemChange(index, "ZQUANT", num);
+                                  }
+                                }}
                                 className="h-8 text-right"
                               />
                             </td>
                             <td className="p-2 border">
                               <Input
+                              disabled
                                 value={item.ZMEINS}
                                 onChange={(e) =>
                                   handleItemChange(index, 'ZMEINS', e.target.value)
@@ -1112,38 +1233,38 @@ export default function ChangeEntry() {
                           <>
 
                             <td className="px-1 py-1 border">
-                        <div className="flex items-center gap-1 w-full">
-                          <Input
-                            value={item.CVNO}
-                            onChange={(e) =>
-                              handleItemChange(index, 'CVNO', e.target.value)
-                            }
-                           className="h-8 w-full px-2"
-                          />
+                              <div className="flex items-center gap-1 w-full">
+                                <Input
+                                  value={item.CVNO}
+                                  onChange={(e) =>
+                                    handleItemChange(index, 'CVNO', e.target.value)
+                                  }
+                                  className="h-8 w-full px-2"
+                                />
 
-                          <button
-                            type="button"
-                            onClick={() => fetchVendorName(item.CVNO, index)}
-                            className="h-4 w-4 shrink-0 border rounded flex items-center justify-center hover:bg-gray-100"
-                            title="Search Vendor"
-                          >
-                            🔍
-                          </button>
-                          </div>
-                        
-                      </td>
+                                <button
+                                  type="button"
+                                  onClick={() => fetchVendorName(item.CVNO, index)}
+                                  className="h-4 w-4 shrink-0 border rounded flex items-center justify-center hover:bg-gray-100"
+                                  title="Search Vendor"
+                                >
+                                  🔍
+                                </button>
+                              </div>
 
-                      {/* Vendor Name */}
-                      <td className="p-2 border">
-                        <Input
-                          value={item.CVNAME}
-                          disabled
-                          // onChange={(e) =>
-                          //   handleItemChange(actualIndex, 'CVNAME', e.target.value)
-                          // }
-                       className="h-8 w-full bg-muted/50"
-                        />
-                      </td>
+                            </td>
+
+                            {/* Vendor Name */}
+                            <td className="p-2 border">
+                              <Input
+                                value={item.CVNAME}
+                             
+                                // onChange={(e) =>
+                                //   handleItemChange(actualIndex, 'CVNAME', e.target.value)
+                                // }
+                                className="h-8 w-full bg-muted/50"
+                              />
+                            </td>
                             {/* <td className="p-2 border"><Input value={item.CVNO} onChange={(e) => handleItemChange(index, 'CVNO', e.target.value)} className="h-8" /></td>
                             <td className="p-2 border"><Input value={item.CVNAME} onChange={(e) => handleItemChange(index, 'CVNAME', e.target.value)} className="h-8" /></td> */}
                           </>

@@ -140,11 +140,13 @@ export default function DisplayEntry() {
   const [items, setItems] = useState<ItemRow[]>([]);
 
   const handleFetch = async () => {
-    if (!gateEntryNo) {
+  const number = gateEntryNo.trim();
+
+if (!number) {
       toast.error('Please enter Gate Entry Number');
       return;
     }
-    if (gateEntryNo.length !== 10) {
+if (number.length !== 10) {
       Swal.fire({
         title: "warning",
         text: "Gate Entry Number Should be 10 Digits Only",
@@ -223,10 +225,26 @@ export default function DisplayEntry() {
           setIsLoaded(true);
           setIsLoading(false);
           toast.success('Data Fetched successfully');
+           var localREFDOCTYP = '';
+          if (headerResponse.REFDOCTYP === "PO") {
+            localREFDOCTYP = "Purchase Order"
+          }
+          else if (headerResponse.REFDOCTYP === "SUB") {
+            localREFDOCTYP = "Subcontracting"
+          }
+          else if (headerResponse.REFDOCTYP === "WOREF") {
+            localREFDOCTYP = "Without Reference"
+          }
+          var localDTYPE = '';
+          if (headerResponse.DTYPE === "IN") {
+            localDTYPE = "Inward"
+          }
+          else if (headerResponse.DTYPE === "OUT") {
+            localDTYPE = "Outward"}
           setHeaderData({
             GENO: headerResponse.GENO,
             WERKS: headerResponse.WERKS,
-            DTYPE: headerResponse.DTYPE,
+            DTYPE: localDTYPE,
             VHDAT_IN: headerResponse.VHDAT_IN,
             VHTIM_IN: headerResponse.VHTIM_IN,
             VHNO: headerResponse.VHNO,
@@ -239,7 +257,7 @@ export default function DisplayEntry() {
             VENDOR: headerResponse.VENDOR || itemResponse[0].CVNO,
             VNAME: headerResponse.VNAME || itemResponse[0].CVNAME,
             INWARDED_BY: headerResponse.INWARDED_BY,
-            REFDOCTYP: headerResponse.REFDOCTYP,
+            REFDOCTYP:localREFDOCTYP,
             LEDAT: headerResponse.LEDAT,
             LETIM: headerResponse.LETIM,
             TRADDR: headerResponse.TRADDR,
@@ -631,10 +649,16 @@ export default function DisplayEntry() {
                       <th className="p-2 border w-60">Material Description</th>
                       {/* Logic for Qty/Unit Columns */}
                       {/* PO Qty & PO Unit → show for PO and SUB */}
-                      {["PO", "SUB"].includes(refDocType) && (
+                      {["PO"].includes(refDocType) && (
                         <>
                           <th className="p-2 border w-24">PO Qty</th>
                           <th className="p-2 border w-24">PO Unit</th>
+                        </>
+                      )}
+                       {[ "SUB"].includes(refDocType) && (
+                        <>
+                          <th style={{ width : '150px'}}>Received Qty</th>
+                          <th className="p-2 border w-24">UOM</th>
                         </>
                       )}
 

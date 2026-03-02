@@ -328,11 +328,17 @@ export default function Reports() {
       });
 
       // ❗ Mandatory checks
-      if (!payload.DATE_FROM || !payload.DATE_TO) {
-        toast.error("Please select From Date and To Date");
-        setIsLoading(false);
-        return;
-      }
+      // if (!payload.DATE_FROM || !payload.DATE_TO) {
+      //   toast.error("Please select From Date and To Date");
+      //   setIsLoading(false);
+      //   return;
+      // }
+
+      if (!payload.WERKS_FROM || !payload.WERKS_TO) {
+  toast.error("Please select Plant From and Plant To");
+  setIsLoading(false);
+  return;
+}
 
       if (!payload.R1 && !payload.R2 && !payload.R3) {
         toast.error("Please select Process Type");
