@@ -276,86 +276,110 @@ export default function InwardWithoutReference() {
   //   }, 800);
   // };
 
-   useEffect(() => {
-      const fetchUOM = async () => {
-        try {
-          const res = await service.UOMGet();
-          console.log("UOM Response", res);
-          setUomList(res || []);
-        } catch (error) {
-          console.error("Failed to fetch UOM", error);
-          toast.error("Failed to load UOM list");
-        }
+  //  useEffect(() => {
+  //     const fetchUOM = async () => {
+  //       try {
+  //         const res = await service.UOMGet();
+  //         console.log("UOM Response", res);
+  //         setUomList(res || []);
+  //       } catch (error) {
+  //         console.error("Failed to fetch UOM", error);
+  //         toast.error("Failed to load UOM list");
+  //       }
+  //     };
+
+  //     fetchUOM();
+  //   }, []);
+
+
+
+
+
+
+  const fetchMaterialDetails = async (matnr: string, index: number) => {
+    if (!matnr) return;
+
+    setIsLoading(true);
+
+    try {
+      const payload = {
+        MATNR: matnr
       };
+
+      const response = await service.MaterialCode(payload);
+
+      if (response?.MATNR) {
+        setItems(prev => {
+          const updated = [...prev];
+
+          updated[index] = {
+            ...updated[index],
+            MATNR: response.MATNR,
+            MAKTX: response.MAKTX || "",
+            ZMEINS: response.UOM || ""
+          };
+
+          return updated;
+        });
+      } else {
+        Swal.fire("Error", "Material not found", "error");
+      }
+
+    } catch (error) {
+      console.error("Material fetch failed", error);
+      Swal.fire("Error", "Failed to fetch material", "error");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+    const UOM_Fetch = async (ZMEINS: string, index: number) => {
+      if (!ZMEINS) return;
   
-      fetchUOM();
-    }, []);
+      setIsLoading(true);
   
-   
+      try {
+        const payload = {
+          UOM: ZMEINS
+        };
+  
+        const response = await service.UOM_Fetch(payload);
+        console.log("response UOM",response)
+  
+        if (response?.STATUS == "SUCCESS" || response?.NUMBER == "200") {
+          setItems(prev => {
+            const updated = [...prev];
+  
+            updated[index] = {
+              ...updated[index],
+              ZMEINS: response.DATA || ""
+            };
+  
+            return updated;
+          });
+          Swal.fire("SUCCESS",response.MSG , "success");
+        } else {
+          // Swal.fire("Error", "Material not found", "error");
+           Swal.fire("warning",response.MSG , "warning");
+        }
+  
+      } catch (error) {
+        console.error("Material fetch failed", error);
+        Swal.fire("Error", "Failed to fetch material", "error");
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-   const handleMaterialCodeChange = (pageIndex: number, code: string) => {
-     const actualIndex = startIndex + pageIndex;
-     const material = getMaterialByCode(code);
-     setItems(prev => prev.map((item, i) =>
-       i === actualIndex
-         ? {
-           ...item,
-           materialCode: code,
-           materialDescription: material?.description || '',
-           unit: material?.unit || item.CHUOM
-         }
-         : item
-     ));
-   };
- 
+  const handleNumberOnlyChange = (
+    index: number,
+    field: keyof ItemRow,
+    value: string
+  ) => {
+    // Allow only digits (0-9)
+    const numericValue = value.replace(/[^0-9]/g, "");
 
-     const fetchMaterialDetails = async (matnr: string, index: number) => {
-       if (!matnr) return;
-   
-       setIsLoading(true);
-   
-       try {
-         const payload = {
-           MATNR: matnr
-         };
-   
-         const response = await service.MaterialCode(payload);
-   
-         if (response?.MATNR) {
-           setItems(prev => {
-             const updated = [...prev];
-   
-             updated[index] = {
-               ...updated[index],
-               MATNR: response.MATNR,
-               MAKTX: response.MAKTX || "",
-               CHUOM: response.UOM || ""
-             };
-   
-             return updated;
-           });
-         } else {
-           Swal.fire("Error", "Material not found", "error");
-         }
-   
-       } catch (error) {
-         console.error("Material fetch failed", error);
-         Swal.fire("Error", "Failed to fetch material", "error");
-       } finally {
-         setIsLoading(false);
-       }
-     };
-
-     const handleNumberOnlyChange = (
-  index: number,
-  field: keyof ItemRow,
-  value: string
-) => {
-  // Allow only digits (0-9)
-  const numericValue = value.replace(/[^0-9]/g, "");
-
-  handleItemChange(index, field, numericValue);
-};
+    handleItemChange(index, field, numericValue);
+  };
 
   const handleItemChange = (
     index: number,
@@ -368,35 +392,35 @@ export default function InwardWithoutReference() {
       )
     );
   };
-    const fetchVendorName = async (vendorCode, index) => {
-      if (!vendorCode) return;
-      setIsLoading(true);
-      try {
-  
-        let payload = {
-          "VENDOR": vendorCode
-        }
-  
-        const response = await service.VendorName(payload);
-  
-  
-  
-        if (response?.VEN_NAME) {
-          setItems(prev => {
-            const updated = [...prev];
-            updated[index] = {
-              ...updated[index],
-              CVNAME: response.VEN_NAME,
-            };
-            return updated;
-          });
-        }
-      } catch (err) {
-        console.error("Vendor fetch failed", err);
-      } finally {
-        setIsLoading(false);
+  const fetchVendorName = async (vendorCode, index) => {
+    if (!vendorCode) return;
+    setIsLoading(true);
+    try {
+
+      let payload = {
+        "VENDOR": vendorCode
       }
-    };
+
+      const response = await service.VendorName(payload);
+
+
+
+      if (response?.VEN_NAME) {
+        setItems(prev => {
+          const updated = [...prev];
+          updated[index] = {
+            ...updated[index],
+            CVNAME: response.VEN_NAME,
+          };
+          return updated;
+        });
+      }
+    } catch (err) {
+      console.error("Vendor fetch failed", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleAddRow = () => {
     setItems(prev => {
@@ -494,8 +518,17 @@ export default function InwardWithoutReference() {
     }
     console.log("headerData", headerData)
     console.log("items", items)
-    const selectedItems = items.filter(item => item.CHK === "X");
+    // const selectedItems = items.filter(item => item.CHK === "X");
+const selectedItems = items
+  .filter(item => item.CHK === "X")
+  .map(item => {
+    const uomCode = item.ZMEINS ? item.ZMEINS.split(" - ")[0].trim() : "";
 
+    return {
+      ...item,
+      ZMEINS: uomCode
+    };
+  });
     if (selectedItems.length === 0) {
       Swal.fire({
         title: "Validation Error",
@@ -524,7 +557,7 @@ export default function InwardWithoutReference() {
       CEL: "",
       ICON: "",
       HEADER: [headerData],
-      ITEM: items,
+      ITEM: selectedItems,
     };
     console.log("payload", payload)
     setIsLoading(true);
@@ -945,7 +978,7 @@ export default function InwardWithoutReference() {
                         />
                       </td> */}
 
-                     <td>
+                      <td>
                         <Input
                           type="text"
                           inputMode="numeric"
@@ -988,29 +1021,29 @@ export default function InwardWithoutReference() {
                         />
                       </td> */}
                       <td>
-  <Input
-    type="number"
-    min="1"
-    value={item.ZQUANT ?? ""}
-    onChange={(e) => {
-      const value = e.target.value;
+                        <Input
+                          type="number"
+                          min="1"
+                          value={item.ZQUANT ?? ""}
+                          onChange={(e) => {
+                            const value = e.target.value;
 
-      // Allow empty
-      if (value === "") {
-        handleItemChange(actualIndex, "ZQUANT", "");
-        return;
-      }
+                            // Allow empty
+                            if (value === "") {
+                              handleItemChange(actualIndex, "ZQUANT", "");
+                              return;
+                            }
 
-      const num = Number(value);
+                            const num = Number(value);
 
-      // Allow only numbers greater than 0
-      if (num > 0) {
-        handleItemChange(actualIndex, "ZQUANT", num);
-      }
-    }}
-    className="h-8 text-center"
-  />
-</td>
+                            // Allow only numbers greater than 0
+                            if (num > 0) {
+                              handleItemChange(actualIndex, "ZQUANT", num);
+                            }
+                          }}
+                          className="h-8 text-center"
+                        />
+                      </td>
 
                       {/* PO Unit */}
                       {/* <td>
@@ -1023,8 +1056,23 @@ export default function InwardWithoutReference() {
                         />
                       </td> */}
 
-   <td>
-                        <Select
+                      <td>
+                        <Input
+                                                  type="text"
+                                                  value={item.ZMEINS ?? ""}
+                                                  onChange={(e) =>
+                                                    handleItemChange(actualIndex, "ZMEINS", e.target.value)
+                                                  }
+                                                  // onBlur={() => UOM_Fetch(item.CHUOM, actualIndex)}
+                                                  onKeyDown={(e) => {
+                                                    if (e.key === "Enter") {
+                                                      e.preventDefault();
+                                                      UOM_Fetch(item.ZMEINS, actualIndex);
+                                                    }
+                                                  }}
+                                                  className="h-8"
+                                                />
+                        {/* <Select
                           value={item.CHUOM}
                           onValueChange={(value) =>
                             handleItemChange(actualIndex, "CHUOM", value)
@@ -1040,23 +1088,23 @@ export default function InwardWithoutReference() {
                               </SelectItem>
                             ))}
                           </SelectContent>
-                        </Select>
+                        </Select> */}
                       </td>
 
-                       {/* Vendor */}
+                      {/* Vendor */}
                       <td className="px-1 py-1">
                         <div className="flex items-center gap-1 w-full">
-                         <Input
-  type="text"
-  inputMode="numeric"
-  pattern="[0-9]*"
-  value={item.CVNO ?? ""}
-  onChange={(e) =>
-    handleNumberOnlyChange(actualIndex, "CVNO", e.target.value)
-  }
-  onBlur={() => fetchVendorName(item.CVNO, actualIndex)}
-  className="h-8 w-full px-2"
-/>
+                          <Input
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            value={item.CVNO ?? ""}
+                            onChange={(e) =>
+                              handleNumberOnlyChange(actualIndex, "CVNO", e.target.value)
+                            }
+                            onBlur={() => fetchVendorName(item.CVNO, actualIndex)}
+                            className="h-8 w-full px-2"
+                          />
 
                           <button
                             type="button"
@@ -1066,8 +1114,8 @@ export default function InwardWithoutReference() {
                           >
                             🔍
                           </button>
-                          </div>
-                        
+                        </div>
+
                       </td>
 
                       {/* Vendor Name */}
@@ -1077,7 +1125,7 @@ export default function InwardWithoutReference() {
                           onChange={(e) =>
                             handleItemChange(actualIndex, 'CVNAME', e.target.value)
                           }
-                       className="h-8 w-full bg-muted/50"
+                          className="h-8 w-full bg-muted/50"
                         />
                       </td>
 

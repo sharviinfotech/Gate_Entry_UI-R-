@@ -278,20 +278,20 @@ export default function InwardSubcontracting() {
   //   }, 800);
   // };
 
-  useEffect(() => {
-    const fetchUOM = async () => {
-      try {
-        const res = await service.UOMGet();
-        console.log("UOM Response", res);
-        setUomList(res || []);
-      } catch (error) {
-        console.error("Failed to fetch UOM", error);
-        toast.error("Failed to load UOM list");
-      }
-    };
+  // useEffect(() => {
+  //   const fetchUOM = async () => {
+  //     try {
+  //       const res = await service.UOMGet();
+  //       console.log("UOM Response", res);
+  //       setUomList(res || []);
+  //     } catch (error) {
+  //       console.error("Failed to fetch UOM", error);
+  //       toast.error("Failed to load UOM list");
+  //     }
+  //   };
 
-    fetchUOM();
-  }, []);
+  //   fetchUOM();
+  // }, []);
 
   const handleMaterialCodeChange = (pageIndex: number, code: string) => {
     const actualIndex = startIndex + pageIndex;
@@ -424,6 +424,43 @@ export default function InwardSubcontracting() {
       setIsLoading(false);
     }
   };
+   const UOM_Fetch = async (CHUOM: string, index: number) => {
+    if (!CHUOM) return;
+
+    setIsLoading(true);
+
+    try {
+      const payload = {
+        UOM: CHUOM
+      };
+
+      const response = await service.UOM_Fetch(payload);
+      console.log("response UOM",response)
+
+      if (response?.STATUS == "SUCCESS" || response?.NUMBER == "200") {
+        setItems(prev => {
+          const updated = [...prev];
+
+          updated[index] = {
+            ...updated[index],
+            CHUOM: response.DATA || ""
+          };
+
+          return updated;
+        });
+        Swal.fire("SUCCESS",response.MSG , "success");
+      } else {
+        // Swal.fire("Error", "Material not found", "error");
+         Swal.fire("warning",response.MSG , "warning");
+      }
+
+    } catch (error) {
+      console.error("Material fetch failed", error);
+      Swal.fire("Error", "Failed to fetch material", "error");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
 
   const handleNumberOnlyChange = (
@@ -499,7 +536,17 @@ export default function InwardSubcontracting() {
     }
     console.log("headerData", headerData)
     console.log("items", items)
-    const selectedItems = items.filter(item => item.CHK === "X");
+    // const selectedItems = items.filter(item => item.CHK === "X");
+    const selectedItems = items
+  .filter(item => item.CHK === "X")
+  .map(item => {
+    const uomCode = item.CHUOM ? item.CHUOM.split(" - ")[0].trim() : "";
+
+    return {
+      ...item,
+      CHUOM: uomCode
+    };
+  });
 
     if (selectedItems.length === 0) {
       Swal.fire({
@@ -529,7 +576,7 @@ export default function InwardSubcontracting() {
       CEL: "",
       ICON: "",
       HEADER: [headerData],
-      ITEM: items,
+      ITEM: selectedItems,
     };
     console.log("payload", payload)
     setIsLoading(true);
@@ -928,7 +975,7 @@ export default function InwardSubcontracting() {
                   const actualIndex = startIndex + pageIndex;
 
                   return (
-                    <tr key={actualIndex} className="border-b">
+                    <tr key={actualIndex} className="border-b" >
                       {/* Checkbox */}
                       <td className="text-center">
                         <input
@@ -1045,7 +1092,23 @@ export default function InwardSubcontracting() {
                         />
                       </td> */}
                       <td>
-                        <Select
+                         <Input
+                          type="text"
+                          value={item.CHUOM ?? ""}
+                          onChange={(e) =>
+                            handleItemChange(actualIndex, "CHUOM", e.target.value)
+                          }
+                          // onBlur={() => UOM_Fetch(item.CHUOM, actualIndex)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              UOM_Fetch(item.CHUOM, actualIndex);
+                            }
+                          }}
+                          className="h-8"
+                        />
+
+                        {/* <Select
                           value={item.CHUOM}
                           onValueChange={(value) =>
                             handleItemChange(actualIndex, "CHUOM", value)
@@ -1061,7 +1124,7 @@ export default function InwardSubcontracting() {
                               </SelectItem>
                             ))}
                           </SelectContent>
-                        </Select>
+                        </Select> */}
                       </td>
 
                       {/* Vendor */}
